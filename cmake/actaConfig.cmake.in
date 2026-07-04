@@ -1,0 +1,20 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# ビルド時に FetchContent で取得した依存は actaTargets.cmake に同梱されているため
+# find_dependency() で再解決しない（呼び出し側の環境に存在するとは限らないため）。
+if(NOT @ACTA_FMT_FETCHED@)
+    find_dependency(fmt)
+endif()
+if(NOT @ACTA_SPDLOG_FETCHED@)
+    find_dependency(spdlog)
+else()
+    # FetchContent 由来の spdlog は Threads::Threads にリンクしているため、
+    # exportTargets.cmake の読み込み前に Threads も解決しておく必要がある。
+    find_dependency(Threads)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/actaTargets.cmake")
+
+check_required_components(acta)

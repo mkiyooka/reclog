@@ -14,18 +14,47 @@ add_test(
     COMMAND $<TARGET_FILE:test_doctest_usage>
 )
 
-# ライブラリのサンプルテスト
-add_executable(test_template_library_cpp
-    test_template_library_cpp.cpp
+# logging (Logger / NullLogger / LoggerFactory) のテスト
+add_executable(test_logger
+    test_logger.cpp
 )
-target_include_directories(test_template_library_cpp PRIVATE
-    ${PROJECT_SOURCE_DIR}/include
+target_include_directories(test_logger PRIVATE
+    ${PROJECT_SOURCE_DIR}/tests
 )
-target_link_libraries(test_template_library_cpp PRIVATE
-    template_library_cpp
+target_link_libraries(test_logger PRIVATE
+    acta::logging
     doctest::doctest
 )
 add_test(
-    NAME test_template_library_cpp
-    COMMAND $<TARGET_FILE:test_template_library_cpp>
+    NAME test_logger
+    COMMAND $<TARGET_FILE:test_logger>
+)
+
+# recording::RecorderManager のテスト
+add_executable(test_recorder_manager
+    test_recorder_manager.cpp
+)
+target_link_libraries(test_recorder_manager PRIVATE
+    acta::recording
+    doctest::doctest
+)
+add_test(
+    NAME test_recorder_manager
+    COMMAND $<TARGET_FILE:test_recorder_manager>
+)
+
+# output::OutputContext のテスト
+add_executable(test_output_context
+    test_output_context.cpp
+)
+target_include_directories(test_output_context PRIVATE
+    ${PROJECT_SOURCE_DIR}/tests
+)
+target_link_libraries(test_output_context PRIVATE
+    acta::output
+    doctest::doctest
+)
+add_test(
+    NAME test_output_context
+    COMMAND $<TARGET_FILE:test_output_context>
 )

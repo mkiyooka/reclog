@@ -1,7 +1,11 @@
-# C++ Library Template
+# acta
 
-C++17 ライブラリのテンプレートプロジェクト。
+C++17 の出力システムライブラリ。診断ログ（`acta::logging`）と解析データ記録
+（`acta::recording`）を DI で分離しつつ統一的に管理する。
 pixi による再現性の高い開発環境と、カバレッジ計測・コード品質ツールを提供する。
+
+設計の詳細は [docs/output-system.md](docs/output-system.md)、
+利用方法は [docs/output-system-guide.md](docs/output-system-guide.md) を参照。
 
 ## 必要条件
 
@@ -65,12 +69,14 @@ pixi run valgrind         # ctest memcheck 経由で valgrind を実行
 ```text
 build/
 ├── src/
-│   ├── libtemplate_library_cpp.a      # 静的ライブラリ（デフォルト）
-│   └── libtemplate_library_cpp.so     # 共有ライブラリ（BUILD_SHARED_LIBS=ON 時）
+│   ├── libacta_logging.a      # 診断ログライブラリ（静的、デフォルト）
+│   └── libacta_recording.a    # 解析データ記録ライブラリ（静的、デフォルト）
 ├── tests/
-│   └── test_*                         # テストバイナリ
-└── benches/
-    └── bench_*                        # ベンチマークバイナリ
+│   └── test_*                 # テストバイナリ
+├── benches/
+│   └── bench_*                # ベンチマークバイナリ
+└── examples/
+    └── example_output          # output-system の使用例
 ```
 
 ## ライブラリのビルド形式
@@ -87,59 +93,85 @@ cmake --preset=release -DBUILD_SHARED_LIBS=ON
 cmake --build build
 ```
 
+## ターゲット構成
+
+acta は 3 つの CMake ターゲットで構成される。
+
+| ターゲット        | 種別       | 内容                                                            |
+| ----------------- | ---------- | --------------------------------------------------------------- |
+| `acta::logging`   | ライブラリ | `Logger` インターフェース + spdlog 実装                         |
+| `acta::recording` | ライブラリ | `DataRecorder` インターフェース + spdlog 実装                   |
+| `acta::output`    | INTERFACE  | `OutputContext<Key>`（header-only、logging/recording を束ねる） |
+
+spdlog / fmt は公開ヘッダーから隠蔽されており、利用側は `acta::output` をリンクするだけで
+`Logger` / `DataRecorder` / `OutputContext` を利用できる。詳細は
+[docs/output-system.md](docs/output-system.md) を参照。
+
 ## ライブラリの利用方法
 
-### 1. ビルド済みライブラリをリンクする
-
-ビルド後の成果物を直接使う場合：
-
-```cmake
-# CMakeLists.txt（利用側）
-add_executable(my_app main.cpp)
-
-target_include_directories(my_app PRIVATE /path/to/template_library_cpp/include)
-target_link_libraries(my_app PRIVATE /path/to/template_library_cpp/build/src/libtemplate_library_cpp.a)
-```
-
-### 2. FetchContent で取得する
+### 1. FetchContent で取得する（推奨）
 
 利用側の CMakeLists.txt に追加するだけでビルド・リンクまで自動化される。
 
 ```cmake
 include(FetchContent)
 FetchContent_Declare(
-    template_library_cpp
-    GIT_REPOSITORY https://github.com/<your-org>/template_library_cpp.git
+    acta
+    GIT_REPOSITORY https://github.com/<your-org>/acta.git
     GIT_TAG        main  # またはタグ・コミットハッシュ
 )
-FetchContent_MakeAvailable(template_library_cpp)
+set(ACTA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ACTA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(acta)
 
 add_executable(my_app main.cpp)
-target_link_libraries(my_app PRIVATE template_library_cpp)
+target_link_libraries(my_app PRIVATE acta::output)
 ```
 
-`FetchContent_MakeAvailable` 後は `target_link_libraries` にターゲット名 `template_library_cpp` を指定するだけで
-インクルードパスも自動的に設定される。
-
-### 3. add_subdirectory で取得する
+### 2. add_subdirectory で取得する
 
 ローカルにクローンしてサブディレクトリとして追加する場合：
 
 ```cmake
-add_subdirectory(third_party/template_library_cpp)
+set(ACTA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ACTA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(third_party/acta)
 
 add_executable(my_app main.cpp)
-target_link_libraries(my_app PRIVATE template_library_cpp)
+target_link_libraries(my_app PRIVATE acta::output)
+```
+
+### 3. インストール済みライブラリを find_package で取得する
+
+`-DACTA_INSTALL=ON` を指定してビルド・インストールした場合、`find_package(acta CONFIG)`
+で利用できる。
+
+```bash
+cmake --preset=release -DACTA_INSTALL=ON
+cmake --build build
+cmake --install build --prefix /path/to/install
+```
+
+```cmake
+find_package(acta CONFIG REQUIRED)
+
+add_executable(my_app main.cpp)
+target_link_libraries(my_app PRIVATE acta::output)
 ```
 
 ## ディレクトリ構成
 
-- `src/` — ライブラリのソースコード
+- `src/` — ライブラリの実装（spdlog 依存はこの層に閉じる）
+    - `logging/` — `acta::logging::LoggerFactory` の spdlog 実装
+    - `recording/` — `acta::recording::RecorderFactory` の spdlog 実装
 - `include/` — 公開ヘッダファイル
-    - `template_library_cpp/` — ライブラリの公開インターフェース
-        - `template_library_cpp.hpp` — エントリーポイントヘッダ
+    - `acta/`
+        - `logging/` — 診断ログの抽象インターフェース（spdlog 非依存）
+        - `recording/` — 解析データ記録の抽象インターフェース（spdlog 非依存）
+        - `output/` — `OutputContext<Key>`（DI コンテナ、header-only）
 - `tests/` — テストコード（doctest）
-    - `support/` — doctest 記述パターンサンプル
+    - `support/` — テスト用ヘルパー（`SpyLogger` 等）
+- `examples/` — 使用例（`example_output` — Logger + DataRecorder のサンプル）
 - `benches/` — ベンチマーク（nanobench）
 - `cmake/` — CMake モジュール群
 - `docs/` — ドキュメント
@@ -147,3 +179,5 @@ target_link_libraries(my_app PRIVATE template_library_cpp)
 ## ドキュメント
 
 - [docs/build-system.md](docs/build-system.md) — ビルドシステム・開発ツールの詳細
+- [docs/output-system.md](docs/output-system.md) — 出力システムの設計ドキュメント
+- [docs/output-system-guide.md](docs/output-system-guide.md) — 出力システムの利用ガイド
