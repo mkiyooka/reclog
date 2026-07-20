@@ -4,29 +4,29 @@
 #include <cstdint>
 #include <stdexcept>
 
-#include "acta/recording/null_recorder.hpp"
-#include "acta/recording/recorder_manager.hpp"
+#include "reclog/recording/null_recorder.hpp"
+#include "reclog/recording/recorder_manager.hpp"
 
 namespace {
 enum class Module : std::uint8_t { kX, kY };
 } // namespace
 
 TEST_CASE("RecorderManager registers and accesses recorders by key") {
-    acta::recording::RecorderManager<Module> manager;
-    manager.RegisterRecorder(Module::kX, std::make_unique<acta::recording::NullRecorder>());
+    reclog::recording::RecorderManager<Module> manager;
+    manager.RegisterRecorder(Module::kX, std::make_unique<reclog::recording::NullRecorder>());
 
     CHECK_NOTHROW(manager[Module::kX]);
 }
 
 TEST_CASE("RecorderManager throws on unregistered key access") {
-    acta::recording::RecorderManager<Module> manager;
-    manager.RegisterRecorder(Module::kX, std::make_unique<acta::recording::NullRecorder>());
+    reclog::recording::RecorderManager<Module> manager;
+    manager.RegisterRecorder(Module::kX, std::make_unique<reclog::recording::NullRecorder>());
 
     CHECK_THROWS_AS(manager[Module::kY], std::out_of_range);
 }
 
 TEST_CASE("RecorderManager::FlushAll flushes every registered recorder") {
-    class FlushCountingRecorder : public acta::recording::DataRecorder {
+    class FlushCountingRecorder : public reclog::recording::DataRecorder {
     public:
         void Enable() override {}
         void Disable() override {}
@@ -37,7 +37,7 @@ TEST_CASE("RecorderManager::FlushAll flushes every registered recorder") {
         int flush_count = 0;
     };
 
-    acta::recording::RecorderManager<Module> manager;
+    reclog::recording::RecorderManager<Module> manager;
     auto recorder_x = std::make_unique<FlushCountingRecorder>();
     auto recorder_y = std::make_unique<FlushCountingRecorder>();
     auto *raw_x = recorder_x.get();

@@ -3,9 +3,9 @@
 #include <memory>
 #include <string>
 
-#include "acta/recording/data_recorder.hpp"
+#include "reclog/recording/data_recorder.hpp"
 
-namespace acta::recording {
+namespace reclog::recording {
 
 /**
  * @brief DataRecorder インスタンスを生成するファクトリ
@@ -16,12 +16,12 @@ namespace acta::recording {
  *
  * @code
  * // CSV: ヘッダ行を自動出力し、以降は Write() で行を追記する。
- * auto csv = acta::recording::RecorderFactory::MakeCsvFile("results", "results.csv", "name,value,remainder");
+ * auto csv = reclog::recording::RecorderFactory::MakeCsvFile("results", "results.csv", "name,value,remainder");
  * csv->Enable();
  * csv->Write("{},{:.6f},{}", "doubled", 7.0, 1);
  *
  * // JSON Lines (NDJSON): 1行1文字列を追記する。JSON化は呼び出し側の責務。
- * auto jl = acta::recording::RecorderFactory::MakeJsonLinesFile("results", "results.jsonl");
+ * auto jl = reclog::recording::RecorderFactory::MakeJsonLinesFile("results", "results.jsonl");
  * jl->Enable();
  * jl->Write("{}", json_string);
  * @endcode
@@ -76,4 +76,4 @@ public:
     static std::unique_ptr<DataRecorder> MakeNull();
 };
 
-} // namespace acta::recording
+} // namespace reclog::recording

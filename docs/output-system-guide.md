@@ -17,24 +17,24 @@ enum class Module : std::uint8_t { kSolver, kPostproc };
 ### 2. Logger と RecorderManager を初期化する
 
 ```cpp
-#include "acta/logging/logger_factory.hpp"
-#include "acta/output/output_context.hpp"
-#include "acta/recording/recorder_factory.hpp"
-#include "acta/recording/recorder_manager.hpp"
+#include "reclog/logging/logger_factory.hpp"
+#include "reclog/output/output_context.hpp"
+#include "reclog/recording/recorder_factory.hpp"
+#include "reclog/recording/recorder_manager.hpp"
 
 // 診断ログ: コンソール出力、Info レベル以上
-auto logger = acta::logging::LoggerFactory::MakeConsole("app", acta::logging::LogLevel::kInfo);
+auto logger = reclog::logging::LoggerFactory::MakeConsole("app", reclog::logging::LogLevel::kInfo);
 
 // 解析データ: モジュールごとにファイル出力
-acta::recording::RecorderManager<Module> manager;
-manager.RegisterRecorder(Module::kSolver,   acta::recording::RecorderFactory::MakeFile("solver",   "solver.csv"));
-manager.RegisterRecorder(Module::kPostproc, acta::recording::RecorderFactory::MakeFile("postproc", "postproc.csv"));
+reclog::recording::RecorderManager<Module> manager;
+manager.RegisterRecorder(Module::kSolver,   reclog::recording::RecorderFactory::MakeFile("solver",   "solver.csv"));
+manager.RegisterRecorder(Module::kPostproc, reclog::recording::RecorderFactory::MakeFile("postproc", "postproc.csv"));
 ```
 
 ### 3. OutputContext にまとめて注入する
 
 ```cpp
-acta::output::OutputContext<Module> out(*logger, manager);
+reclog::output::OutputContext<Module> out(*logger, manager);
 run(out);
 ```
 
@@ -45,30 +45,30 @@ run(out);
 ### ログレベルと出力制御
 
 ```cpp
-acta::logging::Logger& log = out.GetLogger();
+reclog::logging::Logger& log = out.GetLogger();
 
-log.Log(acta::logging::LogLevel::kTrace,    "詳細トレース");
-log.Log(acta::logging::LogLevel::kDebug,    "デバッグ情報");
-log.Log(acta::logging::LogLevel::kInfo,     "進行状況");
-log.Log(acta::logging::LogLevel::kWarn,     "警告");
-log.Log(acta::logging::LogLevel::kError,    "エラー");
-log.Log(acta::logging::LogLevel::kCritical, "致命的エラー");
+log.Log(reclog::logging::LogLevel::kTrace,    "詳細トレース");
+log.Log(reclog::logging::LogLevel::kDebug,    "デバッグ情報");
+log.Log(reclog::logging::LogLevel::kInfo,     "進行状況");
+log.Log(reclog::logging::LogLevel::kWarn,     "警告");
+log.Log(reclog::logging::LogLevel::kError,    "エラー");
+log.Log(reclog::logging::LogLevel::kCritical, "致命的エラー");
 ```
 
 `fmt::format_string` を使ったフォーマットヘルパーもある。`ShouldLog()` が false の場合は
 フォーマット処理自体をスキップするため、無効時のコストはゼロ。
 
 ```cpp
-log.Log(acta::logging::LogLevel::kDebug, "step={}, value={:.6f}", step, value);
+log.Log(reclog::logging::LogLevel::kDebug, "step={}, value={:.6f}", step, value);
 ```
 
 ### ファクトリ一覧
 
 | メソッド                                             | 出力先                 |
 | ---------------------------------------------------- | ---------------------- |
-| `acta::logging::LoggerFactory::MakeConsole(name)`    | 標準出力（カラー付き） |
-| `acta::logging::LoggerFactory::MakeFile(name, path)` | ファイル（同期）       |
-| `acta::logging::LoggerFactory::MakeNull()`           | 何もしない             |
+| `reclog::logging::LoggerFactory::MakeConsole(name)`    | 標準出力（カラー付き） |
+| `reclog::logging::LoggerFactory::MakeFile(name, path)` | ファイル（同期）       |
+| `reclog::logging::LoggerFactory::MakeNull()`           | 何もしない             |
 
 `MakeConsole` / `MakeFile` は第3引数でログレベルを指定できる（省略時は `kInfo`）。
 
@@ -79,7 +79,7 @@ log.Log(acta::logging::LogLevel::kDebug, "step={}, value={:.6f}", step, value);
 ### Enable / Disable と Write
 
 ```cpp
-acta::recording::DataRecorder& rec = out.GetRecorders()[Module::kSolver];
+reclog::recording::DataRecorder& rec = out.GetRecorders()[Module::kSolver];
 
 rec.Enable();                              // 記録開始
 rec.Write("{},{:.6f}", step, value);       // fmt 形式で書き込み
@@ -101,11 +101,11 @@ out.GetRecorders().FlushAll();
 
 | メソッド                                                            | 出力先                           | 初期状態 |
 | ------------------------------------------------------------------- | -------------------------------- | -------- |
-| `acta::recording::RecorderFactory::MakeFile(name, path)`            | ファイル（同期）                 | disabled |
-| `acta::recording::RecorderFactory::MakeCsvFile(name, path, header)` | CSV ファイル（ヘッダ行自動出力） | disabled |
-| `acta::recording::RecorderFactory::MakeJsonLinesFile(name, path)`   | JSON Lines (NDJSON)              | disabled |
-| `acta::recording::RecorderFactory::MakeConsole(name)`               | 標準出力                         | disabled |
-| `acta::recording::RecorderFactory::MakeNull()`                      | 何もしない                       | disabled |
+| `reclog::recording::RecorderFactory::MakeFile(name, path)`            | ファイル（同期）                 | disabled |
+| `reclog::recording::RecorderFactory::MakeCsvFile(name, path, header)` | CSV ファイル（ヘッダ行自動出力） | disabled |
+| `reclog::recording::RecorderFactory::MakeJsonLinesFile(name, path)`   | JSON Lines (NDJSON)              | disabled |
+| `reclog::recording::RecorderFactory::MakeConsole(name)`               | 標準出力                         | disabled |
+| `reclog::recording::RecorderFactory::MakeNull()`                      | 何もしない                       | disabled |
 
 いずれのファクトリで生成したレコーダーも初期状態は `disabled`。
 記録を開始するには明示的に `Enable()` を呼ぶ。
@@ -117,24 +117,24 @@ JSON Lines 出力では JSON 文字列の構築は呼び出し側の責務。`Wr
 
 ## テストでの使い方
 
-テストでは `acta::logging::NullLogger` と `SpyLogger` を使い、外部 I/O なしに動作を検証できる。
+テストでは `reclog::logging::NullLogger` と `SpyLogger` を使い、外部 I/O なしに動作を検証できる。
 
 ```cpp
-#include "acta/logging/null_logger.hpp"
-#include "acta/recording/null_recorder.hpp"
+#include "reclog/logging/null_logger.hpp"
+#include "reclog/recording/null_recorder.hpp"
 #include "support/spy_logger.hpp"
 
 // ログ検証が不要な場合
-acta::logging::NullLogger null_log;
+reclog::logging::NullLogger null_log;
 
 // ログ内容を検証したい場合
 SpyLogger test_log;
-test_log.SetLevel(acta::logging::LogLevel::kDebug);
+test_log.SetLevel(reclog::logging::LogLevel::kDebug);
 
-acta::recording::RecorderManager<Module> manager;
-manager.RegisterRecorder(Module::kSolver, std::make_unique<acta::recording::NullRecorder>());
+reclog::recording::RecorderManager<Module> manager;
+manager.RegisterRecorder(Module::kSolver, std::make_unique<reclog::recording::NullRecorder>());
 
-acta::output::OutputContext<Module> out(test_log, manager);
+reclog::output::OutputContext<Module> out(test_log, manager);
 run(out);
 
 assert(test_log.Entries().size() == 3);
@@ -150,14 +150,14 @@ test_log.clear(); // エントリをリセット
 ### モジュールごとに出力を切り替える
 
 ```cpp
-void run(acta::output::OutputContext<Module>& out) {
+void run(reclog::output::OutputContext<Module>& out) {
     out.GetRecorders()[Module::kSolver].Enable();
     out.GetRecorders()[Module::kPostproc].Disable(); // この回は不要
 
     for (int step = 0; step < steps; ++step) {
         double x = compute(step);
         out.GetRecorders()[Module::kSolver].Write("{},{:.9f}", step, x);
-        out.GetLogger().Log(acta::logging::LogLevel::kDebug, "step done");
+        out.GetLogger().Log(reclog::logging::LogLevel::kDebug, "step done");
     }
 
     out.GetRecorders().FlushAll();
@@ -167,18 +167,18 @@ void run(acta::output::OutputContext<Module>& out) {
 ### 出力を完全に無効化する（本番ランの高速化）
 
 ```cpp
-auto logger = acta::logging::LoggerFactory::MakeNull();
+auto logger = reclog::logging::LoggerFactory::MakeNull();
 
-acta::recording::RecorderManager<Module> manager;
-manager.RegisterRecorder(Module::kSolver,   acta::recording::RecorderFactory::MakeNull());
-manager.RegisterRecorder(Module::kPostproc, acta::recording::RecorderFactory::MakeNull());
+reclog::recording::RecorderManager<Module> manager;
+manager.RegisterRecorder(Module::kSolver,   reclog::recording::RecorderFactory::MakeNull());
+manager.RegisterRecorder(Module::kPostproc, reclog::recording::RecorderFactory::MakeNull());
 
-acta::output::OutputContext<Module> out(*logger, manager);
+reclog::output::OutputContext<Module> out(*logger, manager);
 run(out); // I/O コストゼロ
 ```
 
 ### ログレベルを動的に変更する
 
 ```cpp
-out.GetLogger().SetLevel(acta::logging::LogLevel::kWarn); // Debug・Info を抑制
+out.GetLogger().SetLevel(reclog::logging::LogLevel::kWarn); // Debug・Info を抑制
 ```

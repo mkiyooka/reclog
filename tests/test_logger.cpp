@@ -1,14 +1,14 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
-#include "acta/logging/logger_factory.hpp"
-#include "acta/logging/null_logger.hpp"
+#include "reclog/logging/logger_factory.hpp"
+#include "reclog/logging/null_logger.hpp"
 #include "support/spy_logger.hpp"
 
-using acta::logging::LogLevel;
+using reclog::logging::LogLevel;
 
 TEST_CASE("NullLogger discards all messages") {
-    acta::logging::NullLogger logger;
+    reclog::logging::NullLogger logger;
 
     CHECK(logger.Level() == LogLevel::kOff);
 
@@ -63,7 +63,7 @@ TEST_CASE("Logger::Log format helper skips formatting cost when suppressed") {
 }
 
 TEST_CASE("LoggerFactory::MakeNull returns a logger that discards messages") {
-    auto logger = acta::logging::LoggerFactory::MakeNull();
+    auto logger = reclog::logging::LoggerFactory::MakeNull();
     logger->SetLevel(LogLevel::kTrace);
     logger->Log(LogLevel::kInfo, "message");
 

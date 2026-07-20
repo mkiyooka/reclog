@@ -22,7 +22,7 @@ target_include_directories(test_logger PRIVATE
     ${PROJECT_SOURCE_DIR}/tests
 )
 target_link_libraries(test_logger PRIVATE
-    acta::logging
+    reclog::logging
     doctest::doctest
 )
 add_test(
@@ -35,7 +35,7 @@ add_executable(test_recorder_manager
     test_recorder_manager.cpp
 )
 target_link_libraries(test_recorder_manager PRIVATE
-    acta::recording
+    reclog::recording
     doctest::doctest
 )
 add_test(
@@ -51,7 +51,7 @@ target_include_directories(test_output_context PRIVATE
     ${PROJECT_SOURCE_DIR}/tests
 )
 target_link_libraries(test_output_context PRIVATE
-    acta::output
+    reclog::output
     doctest::doctest
 )
 add_test(

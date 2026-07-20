@@ -1,8 +1,8 @@
 #pragma once
 
-#include "acta/logging/logger.hpp"
+#include "reclog/logging/logger.hpp"
 
-namespace acta::logging {
+namespace reclog::logging {
 
 /**
  * @brief 何も出力しないロガー
@@ -18,4 +18,4 @@ public:
     LogLevel Level() const override { return LogLevel::kOff; }
 };
 
-} // namespace acta::logging
+} // namespace reclog::logging

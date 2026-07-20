@@ -4,7 +4,7 @@
 
 #include <fmt/format.h>
 
-namespace acta::recording {
+namespace reclog::recording {
 
 /**
  * @brief 解析データ記録の共通インターフェース
@@ -73,4 +73,4 @@ public:
     }
 };
 
-} // namespace acta::recording
+} // namespace reclog::recording

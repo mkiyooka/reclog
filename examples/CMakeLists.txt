@@ -6,5 +6,5 @@ add_executable(example_output
     example_output.cpp
 )
 target_link_libraries(example_output PRIVATE
-    acta::output
+    reclog::output
 )

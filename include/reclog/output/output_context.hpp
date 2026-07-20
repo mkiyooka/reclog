@@ -1,9 +1,9 @@
 #pragma once
 
-#include "acta/logging/logger.hpp"
-#include "acta/recording/recorder_manager.hpp"
+#include "reclog/logging/logger.hpp"
+#include "reclog/recording/recorder_manager.hpp"
 
-namespace acta::output {
+namespace reclog::output {
 
 /**
  * @brief 出力処理に必要な依存をまとめた DI コンテキスト
@@ -16,10 +16,10 @@ namespace acta::output {
  * @code
  * enum class Module { kX, kY };
  *
- * acta::output::OutputContext<Module> output_context(logger, recorder_manager);
+ * reclog::output::OutputContext<Module> output_context(logger, recorder_manager);
  *
- * void run(acta::output::OutputContext<Module>& output_context) {
- *     output_context.GetLogger().Log(acta::logging::LogLevel::kDebug, "initialize start");
+ * void run(reclog::output::OutputContext<Module>& output_context) {
+ *     output_context.GetLogger().Log(reclog::logging::LogLevel::kDebug, "initialize start");
  *     output_context.GetRecorders()[Module::kX].Enable();
  *     output_context.GetRecorders()[Module::kX].Write("{},{:.6f}", step, value);
  * }
@@ -47,4 +47,4 @@ private:
     recording::RecorderManager<Key> *recorders_;
 };
 
-} // namespace acta::output
+} // namespace reclog::output

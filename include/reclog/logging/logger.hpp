@@ -4,9 +4,9 @@
 
 #include <fmt/format.h>
 
-#include "acta/logging/log_level.hpp"
+#include "reclog/logging/log_level.hpp"
 
-namespace acta::logging {
+namespace reclog::logging {
 
 /**
  * @brief ロガーの共通インターフェース
@@ -47,8 +47,8 @@ public:
      *
      * コストの高い文字列生成を出力が確定した場合だけ行うために使う。
      * @code
-     * if (logger.ShouldLog(acta::logging::LogLevel::kDebug)) {
-     *     logger.Log(acta::logging::LogLevel::kDebug, expensive_to_string());
+     * if (logger.ShouldLog(reclog::logging::LogLevel::kDebug)) {
+     *     logger.Log(reclog::logging::LogLevel::kDebug, expensive_to_string());
      * }
      * @endcode
      */
@@ -61,7 +61,7 @@ public:
      * ShouldLog() が false の場合はフォーマット処理自体をスキップする。
      *
      * @code
-     * logger.Log(acta::logging::LogLevel::kInfo, "step={}, value={:.6f}", step, value);
+     * logger.Log(reclog::logging::LogLevel::kInfo, "step={}, value={:.6f}", step, value);
      * @endcode
      */
     template <typename... Args>
@@ -72,4 +72,4 @@ public:
     }
 };
 
-} // namespace acta::logging
+} // namespace reclog::logging

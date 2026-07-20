@@ -3,9 +3,9 @@
 #include <memory>
 #include <string>
 
-#include "acta/logging/logger.hpp"
+#include "reclog/logging/logger.hpp"
 
-namespace acta::logging {
+namespace reclog::logging {
 
 /**
  * @brief Logger インスタンスを生成するファクトリ
@@ -15,7 +15,7 @@ namespace acta::logging {
  * spdlog に依存するため、公開ヘッダーに spdlog の型は一切現れない。
  *
  * @code
- * auto logger = acta::logging::LoggerFactory::MakeConsole("app", acta::logging::LogLevel::kInfo);
+ * auto logger = reclog::logging::LoggerFactory::MakeConsole("app", reclog::logging::LogLevel::kInfo);
  * @endcode
  */
 class LoggerFactory {
@@ -47,4 +47,4 @@ public:
     static std::unique_ptr<Logger> MakeNull();
 };
 
-} // namespace acta::logging
+} // namespace reclog::logging

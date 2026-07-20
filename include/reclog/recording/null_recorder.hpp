@@ -1,8 +1,8 @@
 #pragma once
 
-#include "acta/recording/data_recorder.hpp"
+#include "reclog/recording/data_recorder.hpp"
 
-namespace acta::recording {
+namespace reclog::recording {
 
 /**
  * @brief 何も出力しないレコーダー
@@ -18,4 +18,4 @@ public:
     void Flush() override {}
 };
 
-} // namespace acta::recording
+} // namespace reclog::recording

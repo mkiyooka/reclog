@@ -1,7 +1,7 @@
-# acta
+# reclog
 
-C++17 の出力システムライブラリ。診断ログ（`acta::logging`）と解析データ記録
-（`acta::recording`）を DI で分離しつつ統一的に管理する。
+C++17 の出力システムライブラリ。診断ログ（`reclog::logging`）と解析データ記録
+（`reclog::recording`）を DI で分離しつつ統一的に管理する。
 pixi による再現性の高い開発環境と、カバレッジ計測・コード品質ツールを提供する。
 
 設計の詳細は [docs/output-system.md](docs/output-system.md)、
@@ -69,8 +69,8 @@ pixi run valgrind         # ctest memcheck 経由で valgrind を実行
 ```text
 build/
 ├── src/
-│   ├── libacta_logging.a      # 診断ログライブラリ（静的、デフォルト）
-│   └── libacta_recording.a    # 解析データ記録ライブラリ（静的、デフォルト）
+│   ├── libreclog_logging.a      # 診断ログライブラリ（静的、デフォルト）
+│   └── libreclog_recording.a    # 解析データ記録ライブラリ（静的、デフォルト）
 ├── tests/
 │   └── test_*                 # テストバイナリ
 ├── benches/
@@ -95,15 +95,15 @@ cmake --build build
 
 ## ターゲット構成
 
-acta は 3 つの CMake ターゲットで構成される。
+reclog は 3 つの CMake ターゲットで構成される。
 
 | ターゲット        | 種別       | 内容                                                            |
 | ----------------- | ---------- | --------------------------------------------------------------- |
-| `acta::logging`   | ライブラリ | `Logger` インターフェース + spdlog 実装                         |
-| `acta::recording` | ライブラリ | `DataRecorder` インターフェース + spdlog 実装                   |
-| `acta::output`    | INTERFACE  | `OutputContext<Key>`（header-only、logging/recording を束ねる） |
+| `reclog::logging`   | ライブラリ | `Logger` インターフェース + spdlog 実装                         |
+| `reclog::recording` | ライブラリ | `DataRecorder` インターフェース + spdlog 実装                   |
+| `reclog::output`    | INTERFACE  | `OutputContext<Key>`（header-only、logging/recording を束ねる） |
 
-spdlog / fmt は公開ヘッダーから隠蔽されており、利用側は `acta::output` をリンクするだけで
+spdlog / fmt は公開ヘッダーから隠蔽されており、利用側は `reclog::output` をリンクするだけで
 `Logger` / `DataRecorder` / `OutputContext` を利用できる。詳細は
 [docs/output-system.md](docs/output-system.md) を参照。
 
@@ -116,16 +116,16 @@ spdlog / fmt は公開ヘッダーから隠蔽されており、利用側は `ac
 ```cmake
 include(FetchContent)
 FetchContent_Declare(
-    acta
-    GIT_REPOSITORY https://github.com/<your-org>/acta.git
+    reclog
+    GIT_REPOSITORY https://github.com/<your-org>/reclog.git
     GIT_TAG        main  # またはタグ・コミットハッシュ
 )
-set(ACTA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(ACTA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(acta)
+set(RECLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(RECLOG_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(reclog)
 
 add_executable(my_app main.cpp)
-target_link_libraries(my_app PRIVATE acta::output)
+target_link_libraries(my_app PRIVATE reclog::output)
 ```
 
 ### 2. add_subdirectory で取得する
@@ -133,39 +133,39 @@ target_link_libraries(my_app PRIVATE acta::output)
 ローカルにクローンしてサブディレクトリとして追加する場合：
 
 ```cmake
-set(ACTA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(ACTA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-add_subdirectory(third_party/acta)
+set(RECLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(RECLOG_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(third_party/reclog)
 
 add_executable(my_app main.cpp)
-target_link_libraries(my_app PRIVATE acta::output)
+target_link_libraries(my_app PRIVATE reclog::output)
 ```
 
 ### 3. インストール済みライブラリを find_package で取得する
 
-`-DACTA_INSTALL=ON` を指定してビルド・インストールした場合、`find_package(acta CONFIG)`
+`-DRECLOG_INSTALL=ON` を指定してビルド・インストールした場合、`find_package(reclog CONFIG)`
 で利用できる。
 
 ```bash
-cmake --preset=release -DACTA_INSTALL=ON
+cmake --preset=release -DRECLOG_INSTALL=ON
 cmake --build build
 cmake --install build --prefix /path/to/install
 ```
 
 ```cmake
-find_package(acta CONFIG REQUIRED)
+find_package(reclog CONFIG REQUIRED)
 
 add_executable(my_app main.cpp)
-target_link_libraries(my_app PRIVATE acta::output)
+target_link_libraries(my_app PRIVATE reclog::output)
 ```
 
 ## ディレクトリ構成
 
 - `src/` — ライブラリの実装（spdlog 依存はこの層に閉じる）
-    - `logging/` — `acta::logging::LoggerFactory` の spdlog 実装
-    - `recording/` — `acta::recording::RecorderFactory` の spdlog 実装
+    - `logging/` — `reclog::logging::LoggerFactory` の spdlog 実装
+    - `recording/` — `reclog::recording::RecorderFactory` の spdlog 実装
 - `include/` — 公開ヘッダファイル
-    - `acta/`
+    - `reclog/`
         - `logging/` — 診断ログの抽象インターフェース（spdlog 非依存）
         - `recording/` — 解析データ記録の抽象インターフェース（spdlog 非依存）
         - `output/` — `OutputContext<Key>`（DI コンテナ、header-only）

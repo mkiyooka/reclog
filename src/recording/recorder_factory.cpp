@@ -1,4 +1,4 @@
-#include "acta/recording/recorder_factory.hpp"
+#include "reclog/recording/recorder_factory.hpp"
 
 #include <memory>
 #include <string>
@@ -8,10 +8,10 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
-#include "acta/recording/data_recorder.hpp"
-#include "acta/recording/null_recorder.hpp"
+#include "reclog/recording/data_recorder.hpp"
+#include "reclog/recording/null_recorder.hpp"
 
-namespace acta::recording {
+namespace reclog::recording {
 
 namespace {
 
@@ -80,4 +80,4 @@ std::unique_ptr<DataRecorder> RecorderFactory::MakeConsole(const std::string &na
 
 std::unique_ptr<DataRecorder> RecorderFactory::MakeNull() { return std::make_unique<NullRecorder>(); }
 
-} // namespace acta::recording
+} // namespace reclog::recording

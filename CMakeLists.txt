@@ -10,22 +10,22 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-project(acta
+project(reclog
     VERSION 0.1.0
     LANGUAGES CXX C
 )
 
 # PROJECT_IS_TOP_LEVEL は CMake 3.21 以降のみ。3.19対応のため CMAKE_PROJECT_NAME で代用する。
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-    set(ACTA_IS_TOP_LEVEL ON)
+    set(RECLOG_IS_TOP_LEVEL ON)
 else()
-    set(ACTA_IS_TOP_LEVEL OFF)
+    set(RECLOG_IS_TOP_LEVEL OFF)
 endif()
-option(ACTA_BUILD_TESTS "Build acta tests" ${ACTA_IS_TOP_LEVEL})
-option(ACTA_BUILD_EXAMPLES "Build acta examples" ${ACTA_IS_TOP_LEVEL})
+option(RECLOG_BUILD_TESTS "Build reclog tests" ${RECLOG_IS_TOP_LEVEL})
+option(RECLOG_BUILD_EXAMPLES "Build reclog examples" ${RECLOG_IS_TOP_LEVEL})
 # FetchContent/add_subdirectory 経由の利用では install(EXPORT) を評価しない。
 # cmake --install で配布したい場合のみ明示的に ON にする。
-option(ACTA_INSTALL "Enable acta install()/export (find_package(acta CONFIG) support)" OFF)
+option(RECLOG_INSTALL "Enable reclog install()/export (find_package(reclog CONFIG) support)" OFF)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -144,12 +144,12 @@ endif()
 # Enable testing for CTest
 enable_testing()
 
-if(ACTA_BUILD_TESTS)
+if(RECLOG_BUILD_TESTS)
     add_subdirectory(tests)
     add_subdirectory(benches)
 endif()
 
-if(ACTA_BUILD_EXAMPLES)
+if(RECLOG_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
@@ -178,56 +178,56 @@ add_custom_target(collect-licenses
 )
 
 # ==============================================================================
-# Install / Export（find_package(acta CONFIG) 対応）
+# Install / Export（find_package(reclog CONFIG) 対応）
 # ==============================================================================
 # FetchContent/add_subdirectory 経由で取り込まれる場合はこのブロックを評価しない
-# （acta_logging/acta_recording の PRIVATE 依存である spdlog が export セットに
+# （reclog_logging/reclog_recording の PRIVATE 依存である spdlog が export セットに
 #   含まれていないと install(EXPORT) がエラーになるため）。
-# cmake --install で配布したい場合は -DACTA_INSTALL=ON を指定する。
+# cmake --install で配布したい場合は -DRECLOG_INSTALL=ON を指定する。
 
-if(ACTA_INSTALL)
+if(RECLOG_INSTALL)
     include(GNUInstallDirs)
     include(CMakePackageConfigHelpers)
 
-    # FetchContent でビルドした依存は acta 自身の export セットに含める必要がある
+    # FetchContent でビルドした依存は reclog 自身の export セットに含める必要がある
     # （install(EXPORT) は静的リンクの推移依存が export セットに存在することを要求するため）。
     # find_package で見つかった依存は呼び出し側の環境にインストール済みなので対象外
-    # （actaConfig.cmake.in の find_dependency() で解決される）。
-    set(_acta_export_targets acta_logging acta_recording acta_output)
-    if(ACTA_FMT_FETCHED)
-        list(APPEND _acta_export_targets fmt)
+    # （reclogConfig.cmake.in の find_dependency() で解決される）。
+    set(_reclog_export_targets reclog_logging reclog_recording reclog_output)
+    if(RECLOG_FMT_FETCHED)
+        list(APPEND _reclog_export_targets fmt)
     endif()
-    if(ACTA_SPDLOG_FETCHED)
-        list(APPEND _acta_export_targets spdlog)
+    if(RECLOG_SPDLOG_FETCHED)
+        list(APPEND _reclog_export_targets spdlog)
     endif()
 
-    install(TARGETS ${_acta_export_targets}
-        EXPORT actaTargets
+    install(TARGETS ${_reclog_export_targets}
+        EXPORT reclogTargets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
     install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-    install(EXPORT actaTargets
-        FILE actaTargets.cmake
-        NAMESPACE acta::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/acta
+    install(EXPORT reclogTargets
+        FILE reclogTargets.cmake
+        NAMESPACE reclog::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/reclog
     )
 
     configure_package_config_file(
-        cmake/actaConfig.cmake.in
-        ${CMAKE_CURRENT_BINARY_DIR}/actaConfig.cmake
-        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/acta
+        cmake/reclogConfig.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/reclogConfig.cmake
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/reclog
     )
     write_basic_package_version_file(
-        ${CMAKE_CURRENT_BINARY_DIR}/actaConfigVersion.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/reclogConfigVersion.cmake
         VERSION ${PROJECT_VERSION}
         COMPATIBILITY SameMajorVersion
     )
     install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/actaConfig.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/actaConfigVersion.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/acta
+        ${CMAKE_CURRENT_BINARY_DIR}/reclogConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/reclogConfigVersion.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/reclog
     )
 endif()
 

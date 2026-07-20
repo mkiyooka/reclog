@@ -2,12 +2,12 @@
 
 include(CMakeFindDependencyMacro)
 
-# ビルド時に FetchContent で取得した依存は actaTargets.cmake に同梱されているため
+# ビルド時に FetchContent で取得した依存は reclogTargets.cmake に同梱されているため
 # find_dependency() で再解決しない（呼び出し側の環境に存在するとは限らないため）。
-if(NOT @ACTA_FMT_FETCHED@)
+if(NOT @RECLOG_FMT_FETCHED@)
     find_dependency(fmt)
 endif()
-if(NOT @ACTA_SPDLOG_FETCHED@)
+if(NOT @RECLOG_SPDLOG_FETCHED@)
     find_dependency(spdlog)
 else()
     # FetchContent 由来の spdlog は Threads::Threads にリンクしているため、
@@ -15,6 +15,6 @@ else()
     find_dependency(Threads)
 endif()
 
-include("${CMAKE_CURRENT_LIST_DIR}/actaTargets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/reclogTargets.cmake")
 
-check_required_components(acta)
+check_required_components(reclog)

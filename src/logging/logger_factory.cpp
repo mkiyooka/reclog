@@ -1,4 +1,4 @@
-#include "acta/logging/logger_factory.hpp"
+#include "reclog/logging/logger_factory.hpp"
 
 #include <memory>
 #include <string>
@@ -8,10 +8,10 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
-#include "acta/logging/logger.hpp"
-#include "acta/logging/null_logger.hpp"
+#include "reclog/logging/logger.hpp"
+#include "reclog/logging/null_logger.hpp"
 
-namespace acta::logging {
+namespace reclog::logging {
 
 namespace {
 
@@ -88,4 +88,4 @@ std::unique_ptr<Logger> LoggerFactory::MakeFile(
 
 std::unique_ptr<Logger> LoggerFactory::MakeNull() { return std::make_unique<NullLogger>(); }
 
-} // namespace acta::logging
+} // namespace reclog::logging

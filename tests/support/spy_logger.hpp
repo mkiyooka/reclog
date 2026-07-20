@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "acta/logging/logger.hpp"
+#include "reclog/logging/logger.hpp"
 
 /**
  * @brief テスト・ベンチマーク用スパイロガー
@@ -16,19 +16,19 @@
  * assert(logger.Entries().size() == 3);
  * @endcode
  */
-class SpyLogger : public acta::logging::Logger {
+class SpyLogger : public reclog::logging::Logger {
 public:
     using Logger::Log;
 
-    void Log(acta::logging::LogLevel level, std::string_view message) override {
+    void Log(reclog::logging::LogLevel level, std::string_view message) override {
         if (level >= level_) {
             entries_.emplace_back(message);
         }
     }
 
-    void SetLevel(acta::logging::LogLevel level) override { level_ = level; }
+    void SetLevel(reclog::logging::LogLevel level) override { level_ = level; }
 
-    acta::logging::LogLevel Level() const override { return level_; }
+    reclog::logging::LogLevel Level() const override { return level_; }
 
     /**
      * @brief 蓄積されたログエントリを返す
@@ -41,6 +41,6 @@ public:
     void clear() { entries_.clear(); }
 
 private:
-    acta::logging::LogLevel level_ = acta::logging::LogLevel::kTrace;
+    reclog::logging::LogLevel level_ = reclog::logging::LogLevel::kTrace;
     std::vector<std::string> entries_;
 };

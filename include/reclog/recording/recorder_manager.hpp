@@ -4,9 +4,9 @@
 #include <unordered_map>
 #include <utility>
 
-#include "acta/recording/data_recorder.hpp"
+#include "reclog/recording/data_recorder.hpp"
 
-namespace acta::recording {
+namespace reclog::recording {
 
 /**
  * @brief モジュール別レコーダーを管理するマネージャー
@@ -19,8 +19,8 @@ namespace acta::recording {
  * @code
  * enum class Module { kX, kY, kZ };
  *
- * acta::recording::RecorderManager<Module> manager;
- * manager.RegisterRecorder(Module::kX, acta::recording::RecorderFactory::MakeFile("moduleX", "moduleX.csv"));
+ * reclog::recording::RecorderManager<Module> manager;
+ * manager.RegisterRecorder(Module::kX, reclog::recording::RecorderFactory::MakeFile("moduleX", "moduleX.csv"));
  * manager[Module::kX].Enable();
  * manager[Module::kX].Write("{},{:.6f}", step, value);
  * @endcode
@@ -64,4 +64,4 @@ private:
     std::unordered_map<Key, std::unique_ptr<DataRecorder>, KeyHash> recorders_;
 };
 
-} // namespace acta::recording
+} // namespace reclog::recording

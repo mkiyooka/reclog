@@ -3,9 +3,9 @@
 
 #include <cstdint>
 
-#include "acta/output/output_context.hpp"
-#include "acta/recording/null_recorder.hpp"
-#include "acta/recording/recorder_manager.hpp"
+#include "reclog/output/output_context.hpp"
+#include "reclog/recording/null_recorder.hpp"
+#include "reclog/recording/recorder_manager.hpp"
 #include "support/spy_logger.hpp"
 
 namespace {
@@ -14,14 +14,14 @@ enum class Module : std::uint8_t { kX };
 
 TEST_CASE("OutputContext exposes the injected logger and recorders") {
     SpyLogger logger;
-    logger.SetLevel(acta::logging::LogLevel::kTrace);
+    logger.SetLevel(reclog::logging::LogLevel::kTrace);
 
-    acta::recording::RecorderManager<Module> manager;
-    manager.RegisterRecorder(Module::kX, std::make_unique<acta::recording::NullRecorder>());
+    reclog::recording::RecorderManager<Module> manager;
+    manager.RegisterRecorder(Module::kX, std::make_unique<reclog::recording::NullRecorder>());
 
-    acta::output::OutputContext<Module> context(logger, manager);
+    reclog::output::OutputContext<Module> context(logger, manager);
 
-    context.GetLogger().Log(acta::logging::LogLevel::kInfo, "initialize start");
+    context.GetLogger().Log(reclog::logging::LogLevel::kInfo, "initialize start");
     context.GetRecorders()[Module::kX].Enable();
 
     REQUIRE(logger.Entries().size() == 1);
