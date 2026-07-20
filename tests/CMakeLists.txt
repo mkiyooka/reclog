@@ -34,6 +34,9 @@ add_test(
 add_executable(test_recorder_manager
     test_recorder_manager.cpp
 )
+target_include_directories(test_recorder_manager PRIVATE
+    ${PROJECT_SOURCE_DIR}/tests
+)
 target_link_libraries(test_recorder_manager PRIVATE
     reclog::recording
     doctest::doctest

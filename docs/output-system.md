@@ -23,9 +23,9 @@ Application Core
 reclog::output::OutputContext<Module>（DI）
  ├── reclog::logging::Logger（診断ログ）
  └── reclog::recording::RecorderManager<Module>
-        ├── Module::kX → reclog::recording::DataRecorder
-        ├── Module::kY → reclog::recording::DataRecorder
-        └── Module::kZ → reclog::recording::DataRecorder
+        ├── Module::kSolver     → reclog::recording::DataRecorder
+        ├── Module::kMesh       → reclog::recording::DataRecorder
+        └── Module::kDebugProbe → reclog::recording::DataRecorder
 ```
 
 - 診断ログと解析データは完全に分離する
@@ -55,6 +55,7 @@ reclog::output::OutputContext<Module>（DI）
 テスト用:
 
 - `tests/support/spy_logger.hpp` — メモリ蓄積によるテスト検証用 Logger 実装
+- `tests/support/spy_recorder.hpp` — メモリ蓄積によるテスト検証用 DataRecorder 実装
 
 ---
 
@@ -214,21 +215,34 @@ graph TD
 
 ### reclog::logging::Logger 実装クラス
 
-| クラス                      | 所在                                       | 用途                      |
-| --------------------------- | ------------------------------------------ | ------------------------- |
-| `reclog::logging::NullLogger` | `include/reclog/logging/null_logger.hpp`     | 何もしない、DI デフォルト |
-| `SpdlogLoggerImpl`          | `src/logging/logger_factory.cpp`（非公開） | spdlog 同期・非同期       |
-| `SpyLogger`（tests/）       | `tests/support/spy_logger.hpp`             | メモリ蓄積、テスト検証用  |
+| クラス                        | 所在                                       | 用途                      |
+| ----------------------------- | ------------------------------------------ | ------------------------- |
+| `reclog::logging::NullLogger` | `include/reclog/logging/null_logger.hpp`   | 何もしない、DI デフォルト |
+| `SpdlogLoggerImpl`            | `src/logging/logger_factory.cpp`（非公開） | spdlog 同期・非同期       |
+| `SpyLogger`（tests/）         | `tests/support/spy_logger.hpp`             | メモリ蓄積、テスト検証用  |
+
+`NullLogger` は「ログを一切出したくない」実行パス（ベンチマーク実行時など）や、`Logger&`
+を要求する API に渡す DI デフォルト値として使う。`SpyLogger` は Logger を利用するコード
+（`OutputContext` 経由のアプリケーションコア等）が「期待したレベル・内容でログを呼んだか」を
+検証するために使う。`ShouldLog()` の使い道・使用例は [ShouldLog() の使い道](#shouldlog-の使い道)、
+`SpyLogger` の使用例は [SpyLogger の使い方](#spylogger-の使い方) を参照。
 
 ### reclog::recording::DataRecorder 実装クラス
 
-| クラス                          | 所在                                           | 用途                                 |
-| ------------------------------- | ---------------------------------------------- | ------------------------------------ |
-| `reclog::recording::NullRecorder` | `include/reclog/recording/null_recorder.hpp`     | 何もしない、DI デフォルト            |
-| `SpdlogRecorderImpl`            | `src/recording/recorder_factory.cpp`（非公開） | spdlog ファイル出力（`%v` パターン） |
+| クラス                            | 所在                                           | 用途                                 |
+| --------------------------------- | ---------------------------------------------- | ------------------------------------ |
+| `reclog::recording::NullRecorder` | `include/reclog/recording/null_recorder.hpp`   | 何もしない、DI デフォルト            |
+| `SpdlogRecorderImpl`              | `src/recording/recorder_factory.cpp`（非公開） | spdlog ファイル出力（`%v` パターン） |
+| `SpyRecorder`（tests/）           | `tests/support/spy_recorder.hpp`               | メモリ蓄積、テスト検証用             |
 
 `SpdlogRecorderImpl` はコンストラクタ時に `set_pattern("%v")` を設定し、メッセージのみを出力する
 （タイムスタンプ等を付加しない）。初期状態は disabled。
+
+`NullRecorder` は「このモジュールの解析データ出力を無効化したい」場合の DI デフォルト値として使う
+（`RecorderManager` は未登録キーへのアクセスで例外を送出するため、「出力しないモジュール」も
+明示的に登録しておく必要がある。詳細は [「モジュール別レコーダー」の例](#モジュール別レコーダーの例) を参照）。
+`SpyRecorder` は `Write()` / `Output()` で渡された内容と `Flush()` の呼び出し回数をメモリに蓄積し、
+テストコードから検証するために使う。使用例は [SpyRecorder の使い方](#spyrecorder-の使い方) を参照。
 
 ### reclog::recording::RecorderManager\<Key\>
 
@@ -265,8 +279,8 @@ public:
 
 `reclog` は 3 つの CMake ターゲットに分割されている。
 
-| ターゲット        | 種別           | 内容                                                            |
-| ----------------- | -------------- | --------------------------------------------------------------- |
+| ターゲット          | 種別           | 内容                                                            |
+| ------------------- | -------------- | --------------------------------------------------------------- |
 | `reclog::logging`   | 通常ライブラリ | `Logger` インターフェース + spdlog 実装（`.cpp` に閉じる）      |
 | `reclog::recording` | 通常ライブラリ | `DataRecorder` インターフェース + spdlog 実装（同上）           |
 | `reclog::output`    | INTERFACE      | `OutputContext<Key>`（header-only）。logging/recording を束ねる |
@@ -371,20 +385,46 @@ FetchContent_MakeAvailable(spdlog)
 #include "reclog/recording/recorder_factory.hpp"
 #include "reclog/recording/recorder_manager.hpp"
 
-enum class Module : std::uint8_t { kX, kY, kZ };
+enum class Module : std::uint8_t { kSolver, kMesh, kDebugProbe };
 
 // 診断ロガー
 auto logger = reclog::logging::LoggerFactory::MakeFile("diag", "diag.log", reclog::logging::LogLevel::kInfo);
 
-// モジュール別レコーダー
+// モジュール別レコーダー（詳細は「モジュール別レコーダーの例」を参照）
 reclog::recording::RecorderManager<Module> manager;
-manager.RegisterRecorder(Module::kX, reclog::recording::RecorderFactory::MakeFile("moduleX", "moduleX.csv"));
-manager.RegisterRecorder(Module::kY, reclog::recording::RecorderFactory::MakeNull());
+manager.RegisterRecorder(Module::kSolver, reclog::recording::RecorderFactory::MakeCsvFile(
+    "solver", "solver.csv", "step,residual"));
+manager.RegisterRecorder(Module::kMesh, reclog::recording::RecorderFactory::MakeNull());
+manager.RegisterRecorder(Module::kDebugProbe, reclog::recording::RecorderFactory::MakeFile(
+    "debug_probe", "debug_probe.csv"));
+manager[Module::kDebugProbe].Disable(); // 通常は無効。調査時のみ Enable() で有効化する
 
 // OutputContext に統合して注入
 reclog::output::OutputContext<Module> out(*logger, manager);
 run(out);
 ```
+
+### 「モジュール別レコーダー」の例
+
+同じ `RecorderManager<Module>` の中でも、モジュールごとに求める出力の性質は異なる。
+
+| モジュール    | 生成方法                   | 目的                                                                                              |
+| ------------- | -------------------------- | ------------------------------------------------------------------------------------------------- |
+| `kSolver`     | `MakeCsvFile()`            | 常時記録したい主要な解析データ。ヘッダ行付き CSV としてファイルに残す                             |
+| `kMesh`       | `MakeNull()`               | このビルド・実行では記録が不要なモジュール。`NullRecorder` を明示的に登録し、コスト無しで無視する |
+| `kDebugProbe` | `MakeFile()` + `Disable()` | 普段は無効だが、調査時にだけ `Enable()` で有効化したいモジュール（出力先は用意しておく）          |
+
+`RecorderManager::operator[]` は未登録キーへのアクセスで例外を送出するため、
+「記録しないモジュール」も `NullRecorder`（`MakeNull()`）で明示的に登録しておく必要がある。
+これは「モジュールを追加したのに出力レコーダーの登録を忘れる」という設定漏れを、
+実行時の例外として早期に検出するための設計である。
+
+`kMesh`（`MakeNull()`）と `kDebugProbe`（`MakeFile()` + `Disable()`）はどちらも
+「現在は何も出力しない」点で同じに見えるが、意味が異なる。
+
+- `kMesh`: そのモジュールの記録機構自体が不要 → コスト・実装ともに no-op の `NullRecorder`
+- `kDebugProbe`: 記録機構は用意しておき、実行時に `Enable()` すれば記録が始まる状態にしておきたい
+  → 実体は `SpdlogRecorderImpl` などの実装だが、初期状態が `Disable()` なだけ
 
 ---
 
@@ -394,19 +434,122 @@ run(out);
 void run(reclog::output::OutputContext<Module>& out) {
     out.GetLogger().Log(reclog::logging::LogLevel::kDebug, "initialize start");
 
-    out.GetRecorders()[Module::kX].Enable();
-    out.GetRecorders()[Module::kY].Disable();
-
     for (int step = 0; step < 100; ++step) {
-        double value = compute(step);
+        double residual = compute(step);
 
         // fmt::format_string によるコンパイル時チェック付きフォーマット
-        out.GetRecorders()[Module::kX].Write("{},{:.6f}", step, value);
+        out.GetRecorders()[Module::kSolver].Write("{},{:.6f}", step, residual);
     }
 
-    out.GetRecorders()[Module::kX].Flush();
+    out.GetRecorders()[Module::kSolver].Flush();
 }
 ```
+
+---
+
+## ShouldLog() の使い道
+
+`Log(level, fmt_str, args...)` のテンプレートヘルパーは `Level()` を満たさない呼び出しでは
+`fmt::format` 自体を行わない。そのため通常はコストの心配なく `Log()` を直接呼べばよい。
+
+`ShouldLog()` が必要になるのは、フォーマット文字列に渡す**引数の準備自体が重い**場合である。
+このとき `Log()` に直接渡すと、フォーマットはスキップされても引数の計算は毎回発生してしまう。
+
+```cpp
+// NG: to_string() は毎ステップ呼ばれる（Log() 内部でレベル判定される前に評価済み）
+logger.Log(LogLevel::kDebug, "state={}", ExpensiveDebugSnapshot(state));
+
+// OK: ShouldLog() で先にレベルを確認し、必要な場合のみ引数を準備する
+if (logger.ShouldLog(LogLevel::kDebug)) {
+    logger.Log(LogLevel::kDebug, "state={}", ExpensiveDebugSnapshot(state));
+}
+```
+
+`ExpensiveDebugSnapshot()` のようにログ出力のためだけに状態のスナップショットを構築する処理や、
+コンテナ全体を文字列化するような処理がある場合に、この形を使う。
+
+---
+
+## SpyLogger の使い方
+
+`SpyLogger`（`tests/support/spy_logger.hpp`）は `Logger` の実装で、`Log()` に渡された
+メッセージを `Level()` でフィルタしたうえでメモリに蓄積する。アプリケーションコアが
+「期待したタイミングで・期待したレベル以上のログを・期待した内容で」出力したかを
+テストで検証するために使う。
+
+```cpp
+#include "support/spy_logger.hpp"
+
+// テスト対象: Logger を DI で受け取り、収束しなければ警告を出す関数
+void RunSolver(reclog::logging::Logger& logger, int max_iter) {
+    for (int iter = 0; iter < max_iter; ++iter) {
+        if (HasConverged(iter)) {
+            return;
+        }
+    }
+    logger.Log(LogLevel::kWarn, "residual did not converge after {} iterations", max_iter);
+}
+
+TEST_CASE("RunSolver logs a warning when residual does not converge") {
+    SpyLogger logger;
+    logger.SetLevel(LogLevel::kWarn); // kInfo 以下は記録しない
+
+    RunSolver(logger, /*max_iter=*/1);
+
+    REQUIRE(logger.Entries().size() == 1);
+    CHECK(logger.Entries()[0] == "residual did not converge after 1 iterations");
+}
+```
+
+`NullLogger` は「ログを見る必要がない」場面（ベンチマーク実行や、ログ以外の振る舞いを
+テストしたい場合の DI 埋め合わせ）で使うのに対し、`SpyLogger` は「ログの内容そのものを
+検証したい」場面で使う、という使い分けになる。
+
+---
+
+## SpyRecorder の使い方
+
+`SpyRecorder`（`tests/support/spy_recorder.hpp`）は `DataRecorder` の実装で、
+`Write()` / `Output()` に渡された内容と `Flush()` の呼び出し回数をメモリに蓄積する。
+`SpyLogger` と同様、テストコードから解析データ出力の内容を検証するために使う。
+
+```cpp
+#include "support/spy_recorder.hpp"
+
+// テスト対象: DataRecorder を DI で受け取り、各ステップの残差を記録する関数
+void RunSolver(reclog::recording::DataRecorder& recorder, int steps) {
+    for (int step = 0; step < steps; ++step) {
+        double residual = ComputeResidual(step);
+        recorder.Write("{},{:.6f}", step, residual);
+    }
+}
+
+TEST_CASE("RunSolver records one row per step while enabled") {
+    SpyRecorder recorder;
+    recorder.Enable();
+
+    RunSolver(recorder, /*steps=*/2);
+    recorder.Flush();
+
+    REQUIRE(recorder.Entries().size() == 2);
+    CHECK(recorder.Entries()[0] == "0,1.000000");
+    CHECK(recorder.Entries()[1] == "1,0.500000");
+    CHECK(recorder.FlushCount() == 1);
+}
+
+TEST_CASE("RunSolver writes nothing while the recorder is disabled") {
+    SpyRecorder recorder; // 初期状態は disabled
+
+    RunSolver(recorder, /*steps=*/2);
+
+    CHECK(recorder.Entries().empty());
+}
+```
+
+`DataRecorder` は仮想関数が `Enable()` / `Disable()` / `IsEnabled()` / `Output()` / `Flush()` の
+5つだけで、以前はテストごとに `FlushCountingRecorder` のような使い捨てのモック実装をその場で
+書いていた。蓄積・検証という同じ目的のコードがテストファイルごとに重複していたため、
+`SpyLogger` と対称的な共通実装として `SpyRecorder` を用意している。
 
 ---
 
