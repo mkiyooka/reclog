@@ -353,6 +353,60 @@ auto jl = reclog::recording::RecorderFactory::MakeJsonLinesFile("results", "resu
 auto rec = reclog::recording::RecorderFactory::MakeNull();
 ```
 
+### MakeJsonLinesFile の使い方
+
+`MakeJsonLinesFile()` の実装は `MakeFile()` と同一（`%v` パターンでファイルに書き込む
+`SpdlogRecorderImpl` を返すだけ）で、JSON のシリアライズは一切行わない。
+「1 行 1 メッセージ」という JSON Lines (NDJSON) 形式の性質を名前で明示するだけの
+薄いラッパーであり、JSON 文字列の組み立ては呼び出し側の責務になる。
+
+```cpp
+auto jl = reclog::recording::RecorderFactory::MakeJsonLinesFile("results", "results.jsonl");
+jl->Enable(); // 初期状態は disabled
+
+// JSON 文字列の組み立ては呼び出し側で行う
+std::string line = fmt::format(R"({{"step":{},"value":{:.6f}}})", step, value);
+
+// Write() の第一引数はフォーマット文字列なので、組み立てた JSON を "{}" で1引数として渡す
+// （json の { } を直接フォーマット文字列に書くと fmt の中括弧と衝突するため避ける）
+jl->Write("{}", line);
+```
+
+出力される `results.jsonl` は次のような1行1レコードのテキストになる。
+
+```text
+{"step":0,"value":1.000000}
+{"step":1,"value":0.500000}
+```
+
+---
+
+## Logger で JSON 形式は使えるか
+
+`LoggerFactory` / `SpdlogLoggerImpl` に JSON 専用の機能はない。`Log()` は
+`logger_->log(level, msg)` を呼ぶだけで、出力書式は `MakeConsole()` / `MakeFile()` に渡す
+`pattern` 引数（spdlog のパターン文字列）でしか制御できず、構造化出力オプションは存在しない。
+
+ただし `DataRecorder::Write()` と同様、`Logger::Log()` も `fmt::format_string` の
+テンプレートヘルパーを持つため、呼び出し側で JSON 文字列を組み立てて渡すこと自体は可能である。
+
+```cpp
+// pattern="%v" を明示し、タイムスタンプ等のメタデータを付加しないようにする
+auto logger = reclog::logging::LoggerFactory::MakeFile(
+    "diag", "diag.jsonl", reclog::logging::LogLevel::kInfo, "%v");
+
+std::string line = fmt::format(R"({{"level":"info","msg":"{}"}})", "start");
+logger->Log(reclog::logging::LogLevel::kInfo, "{}", line);
+```
+
+`pattern` を指定しないデフォルトのままだと、タイムスタンプやレベルを含む可読テキストが
+JSON 行の前後に付加されてしまい、1行1 JSON という形式が崩れる点に注意する。
+
+診断ログは「人間向けの可読テキストを出力する」ことを責務としているため
+（[責務分離](#責務分離) を参照）、構造化データとして残したい場合は
+`Logger` を無理に JSON 化するのではなく、`RecorderFactory::MakeJsonLinesFile()` による
+`DataRecorder` 側を使う方が設計意図に沿う。
+
 ---
 
 ## fmt と spdlog の依存関係
