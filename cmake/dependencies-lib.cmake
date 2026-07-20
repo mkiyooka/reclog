@@ -13,9 +13,9 @@ set(RECLOG_FMT_FETCHED OFF)
 if(NOT TARGET fmt::fmt)
     find_package(fmt CONFIG QUIET)
     if(NOT fmt_FOUND)
-        add_external_package(fmt third_party/fmt-12.0.0
-            URL https://github.com/fmtlib/fmt/archive/refs/tags/12.0.0.tar.gz
-            URL_HASH SHA256=aa3e8fbb6a0066c03454434add1f1fc23299e85758ceec0d7d2d974431481e40
+        add_external_package(fmt third_party/fmt-12.2.0
+            URL https://github.com/fmtlib/fmt/archive/refs/tags/12.2.0.tar.gz
+            URL_HASH SHA256=8b852bb5aa6e7d8564f9e81394055395dd1d1936d38dfd3a17792a02bebd7af0
         )
         FetchContent_MakeAvailable(fmt)
         set(RECLOG_FMT_FETCHED ON)

@@ -28,12 +28,17 @@ pixi run test     # テスト実行
 | Linux x86-64                  | GCC 15 / Clang 21 | mold（高速リンク） |
 | macOS (Apple Silicon / Intel) | AppleClang        | system             |
 
-## テスト・ベンチマーク用ライブラリ
+## サードパーティライブラリ
 
-| ライブラリ | バージョン | 用途                 |
-| ---------- | ---------- | -------------------- |
-| doctest    | 2.4.12     | テストフレームワーク |
-| nanobench  | 4.3.11     | マイクロベンチマーク |
+| ライブラリ | バージョン | ライセンス | 用途                                |
+| ---------- | ---------- | ---------- | ----------------------------------- |
+| fmt        | 12.2.0     | MIT        | 文字列フォーマット（公開API）       |
+| spdlog     | 1.17.0     | MIT        | ログ出力（実装に閉じる、非公開）    |
+| doctest    | 2.5.3      | MIT        | テストフレームワーク                |
+| nanobench  | 4.3.11     | MIT        | マイクロベンチマーク                |
+
+バージョン・取得先は [cmake/dependencies-lib.cmake](cmake/dependencies-lib.cmake)、
+[cmake/dependencies-test.cmake](cmake/dependencies-test.cmake) を参照。
 
 ## 主要タスク一覧
 
