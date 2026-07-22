@@ -5,6 +5,10 @@
 
 #include "reclog/recording/data_recorder.hpp"
 
+namespace reclog::sink {
+class SharedSink;
+} // namespace reclog::sink
+
 namespace reclog::recording {
 
 /**
@@ -74,6 +78,22 @@ public:
      * @brief 何も出力しないレコーダーを生成する（テスト・無効化用）
      */
     static std::unique_ptr<DataRecorder> MakeNull();
+
+    /**
+     * @brief SharedSink に "[REC:marker] " マーカー付きで書き込むレコーダーを生成する
+     *
+     * Logger::Log() の出力と時系列を混同せず突き合わせられるよう、
+     * どのモジュールの解析データかを示すマーカーを各行の先頭に付与する。
+     * 出力パターンは "%v"（メッセージのみ）に固定される。初期状態は disabled。
+     *
+     * 同じ SharedSink を使う複数の Logger / DataRecorder は、書き込み先が
+     * 単一の spdlog::logger（単一のファイルハンドル）に集約されるため、
+     * 別々のファイルハンドルに書き込む場合と異なり書き込み順序が保証される。
+     *
+     * @param sink   書き込み先を共有する SharedSink
+     * @param marker 行頭に付与するマーカー文字列（例: "solver" → "[REC:solver] "）
+     */
+    static std::unique_ptr<DataRecorder> MakeShared(reclog::sink::SharedSink &sink, const std::string &marker);
 };
 
 } // namespace reclog::recording

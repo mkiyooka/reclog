@@ -48,9 +48,12 @@ reclog::output::OutputContext<Module>（DI）
         - `recorder_factory.hpp` — DataRecorder インスタンス生成ファクトリ（宣言のみ）
     - `output/`
         - `output_context.hpp` — `Logger` + `RecorderManager` の DI コンテナ（header-only）
+    - `sink/`
+        - `shared_sink.hpp` — 複数の Logger/DataRecorder が書き込み先を共有するためのハンドル
 - `src/`
     - `logging/logger_factory.cpp` — spdlog を使った Logger 実装（この翻訳単位に閉じる）
     - `recording/recorder_factory.cpp` — spdlog を使った DataRecorder 実装（この翻訳単位に閉じる）
+    - `sink/shared_sink.cpp` — SharedSink の spdlog 実装（この翻訳単位に閉じる）
 
 テスト用:
 
@@ -177,28 +180,40 @@ recorder.Write("{},{:.6f}", step, value);
 
 ```mermaid
 graph TD
+    subgraph sink
+        SS["reclog::sink::SharedSink"]
+    end
+
     subgraph logging
         L["reclog::logging::Logger\n（抽象基底）"]
         NL["reclog::logging::NullLogger\n（no-op）"]
         SL["SpdlogLoggerImpl\n（.cpp内に閉じた spdlog 実装）"]
+        SHL["SharedLoggerImpl\n（.cpp内に閉じた spdlog 実装）"]
         LF["reclog::logging::LoggerFactory"]
         L --> NL
         L --> SL
+        L --> SHL
         LF -.生成.-> SL
         LF -.生成.-> NL
+        LF -.生成.-> SHL
+        SHL -.書き込み先.-> SS
     end
 
     subgraph recording
         DR["reclog::recording::DataRecorder\n（抽象基底）"]
         NR["reclog::recording::NullRecorder\n（no-op）"]
         SR["SpdlogRecorderImpl\n（.cpp内に閉じた spdlog 実装）"]
+        SHR["SharedRecorderImpl\n（.cpp内に閉じた spdlog 実装）"]
         RM["reclog::recording::RecorderManager&lt;Key&gt;\n（モジュール管理）"]
         RF["reclog::recording::RecorderFactory"]
         DR --> NR
         DR --> SR
+        DR --> SHR
         RM --> DR
         RF -.生成.-> SR
         RF -.生成.-> NR
+        RF -.生成.-> SHR
+        SHR -.書き込み先.-> SS
     end
 
     subgraph output
@@ -215,25 +230,29 @@ graph TD
 
 ### reclog::logging::Logger 実装クラス
 
-| クラス                        | 所在                                       | 用途                      |
-| ----------------------------- | ------------------------------------------ | ------------------------- |
-| `reclog::logging::NullLogger` | `include/reclog/logging/null_logger.hpp`   | 何もしない、DI デフォルト |
-| `SpdlogLoggerImpl`            | `src/logging/logger_factory.cpp`（非公開） | spdlog 同期・非同期       |
-| `SpyLogger`（tests/）         | `tests/support/spy_logger.hpp`             | メモリ蓄積、テスト検証用  |
+| クラス                        | 所在                                       | 用途                                         |
+| ----------------------------- | ------------------------------------------ | -------------------------------------------- |
+| `reclog::logging::NullLogger` | `include/reclog/logging/null_logger.hpp`   | 何もしない、DI デフォルト                    |
+| `SpdlogLoggerImpl`            | `src/logging/logger_factory.cpp`（非公開） | spdlog 同期・非同期                          |
+| `SharedLoggerImpl`            | `src/logging/logger_factory.cpp`（非公開） | SharedSink に `[LOG]` マーカー付きで書き込む |
+| `SpyLogger`（tests/）         | `tests/support/spy_logger.hpp`             | メモリ蓄積、テスト検証用                     |
 
 `NullLogger` は「ログを一切出したくない」実行パス（ベンチマーク実行時など）や、`Logger&`
 を要求する API に渡す DI デフォルト値として使う。`SpyLogger` は Logger を利用するコード
 （`OutputContext` 経由のアプリケーションコア等）が「期待したレベル・内容でログを呼んだか」を
 検証するために使う。`ShouldLog()` の使い道・使用例は [ShouldLog() の使い道](#shouldlog-の使い道)、
-`SpyLogger` の使用例は [SpyLogger の使い方](#spylogger-の使い方) を参照。
+`SpyLogger` の使用例は [SpyLogger の使い方](#spylogger-の使い方) を参照。`SharedLoggerImpl` は
+`LoggerFactory::MakeShared()` が返す実装で、詳細は
+[複数の出力を1ファイルに集約する（SharedSink）](#複数の出力を1ファイルに集約するsharedsink) を参照。
 
 ### reclog::recording::DataRecorder 実装クラス
 
-| クラス                            | 所在                                           | 用途                                 |
-| --------------------------------- | ---------------------------------------------- | ------------------------------------ |
-| `reclog::recording::NullRecorder` | `include/reclog/recording/null_recorder.hpp`   | 何もしない、DI デフォルト            |
-| `SpdlogRecorderImpl`              | `src/recording/recorder_factory.cpp`（非公開） | spdlog ファイル出力（`%v` パターン） |
-| `SpyRecorder`（tests/）           | `tests/support/spy_recorder.hpp`               | メモリ蓄積、テスト検証用             |
+| クラス                            | 所在                                           | 用途                                                |
+| --------------------------------- | ---------------------------------------------- | --------------------------------------------------- |
+| `reclog::recording::NullRecorder` | `include/reclog/recording/null_recorder.hpp`   | 何もしない、DI デフォルト                           |
+| `SpdlogRecorderImpl`              | `src/recording/recorder_factory.cpp`（非公開） | spdlog ファイル出力（`%v` パターン）                |
+| `SharedRecorderImpl`              | `src/recording/recorder_factory.cpp`（非公開） | SharedSink に `[REC:marker]` マーカー付きで書き込む |
+| `SpyRecorder`（tests/）           | `tests/support/spy_recorder.hpp`               | メモリ蓄積、テスト検証用                            |
 
 `SpdlogRecorderImpl` はコンストラクタ時に `set_pattern("%v")` を設定し、メッセージのみを出力する
 （タイムスタンプ等を付加しない）。初期状態は disabled。
@@ -243,6 +262,8 @@ graph TD
 明示的に登録しておく必要がある。詳細は [「モジュール別レコーダー」の例](#モジュール別レコーダーの例) を参照）。
 `SpyRecorder` は `Write()` / `Output()` で渡された内容と `Flush()` の呼び出し回数をメモリに蓄積し、
 テストコードから検証するために使う。使用例は [SpyRecorder の使い方](#spyrecorder-の使い方) を参照。
+`SharedRecorderImpl` は `RecorderFactory::MakeShared()` が返す実装で、詳細は
+[複数の出力を1ファイルに集約する（SharedSink）](#複数の出力を1ファイルに集約するsharedsink) を参照。
 
 ### reclog::recording::RecorderManager\<Key\>
 
@@ -277,16 +298,23 @@ public:
 
 ## ターゲット構成
 
-`reclog` は 3 つの CMake ターゲットに分割されている。
+`reclog` は 4 つの CMake ターゲットに分割されている。
 
 | ターゲット          | 種別           | 内容                                                            |
 | ------------------- | -------------- | --------------------------------------------------------------- |
+| `reclog::sink`      | 通常ライブラリ | `SharedSink`（複数の Logger/DataRecorder が共有する書き込み先） |
 | `reclog::logging`   | 通常ライブラリ | `Logger` インターフェース + spdlog 実装（`.cpp` に閉じる）      |
 | `reclog::recording` | 通常ライブラリ | `DataRecorder` インターフェース + spdlog 実装（同上）           |
 | `reclog::output`    | INTERFACE      | `OutputContext<Key>`（header-only）。logging/recording を束ねる |
 
 fmt は `Write()` / `Log()` テンプレートヘルパーが公開ヘッダーで型を使うため PUBLIC 依存、
 spdlog は実装（`.cpp`）にのみ現れるため PRIVATE 依存とする。
+
+`reclog::logging` / `reclog::recording` はどちらも `reclog::sink` の `SharedSink` を
+引数に取る `MakeShared()` を持つため、`reclog::sink` に PUBLIC 依存する。
+`reclog::sink` は `reclog::logging` / `reclog::recording` の両方から参照される
+依存グラフの下流に位置し、`reclog::output`（両者を束ねる上流）には依存しない
+（依存の向きを一方向に保ち、循環依存を避けるため）。
 
 ---
 
@@ -604,6 +632,105 @@ TEST_CASE("RunSolver writes nothing while the recorder is disabled") {
 5つだけで、以前はテストごとに `FlushCountingRecorder` のような使い捨てのモック実装をその場で
 書いていた。蓄積・検証という同じ目的のコードがテストファイルごとに重複していたため、
 `SpyLogger` と対称的な共通実装として `SpyRecorder` を用意している。
+
+---
+
+## 複数の出力を1ファイルに集約する（SharedSink）
+
+### 背景: 小さいファイルの大量出力という運用課題
+
+`Logger` / `DataRecorder` はデフォルトでは別々の spdlog インスタンス（別々のファイル
+ハンドル）を持つ。シミュレーションの試行数・モジュール数が多い運用では、
+「1試行・1モジュールにつき1ファイル」という構成が小さいファイルを大量に生む。
+
+- 集約先ストレージでの inode 枯渇
+- ファイルシステムのブロックサイズ未満（例: 4KB 以下）のファイルによる容量の無駄
+- ファイル転送・バックアップの手間の増大
+- ディレクトリ階層設計の複雑化
+
+これは reclog に固有の問題ではなく、大量の小さい出力を扱うシステム全般で
+知られた課題である。一般的な解決策は「複数の意味的に異なる出力を1つの
+ストリーム（1ファイル）に集約し、各行に種別を示すマーカーを付けて、
+実行後に種別ごとへ分離・抽出する」というものであり、構造化ログ収集
+（Fluentd/Vector 等のログパイプラインが前提とする形式）や JSON Lines +
+`type` フィールドといった形で広く使われている。`SharedSink` はこの手法を
+`Logger` / `DataRecorder` の両方に適用するための仕組みである。
+
+### 別ファイルハンドルで同じパスに書く方法がなぜ不十分か
+
+「`LoggerFactory::MakeFile()` と `RecorderFactory::MakeFile()` に同じ
+`file_path` を渡す」だけでは、2つの独立した `spdlog::logger`（別々の
+ファイルハンドル）が同じファイルに追記する形になり、各書き込み自体は
+アトミックでも、log と record のどちらが先に書き込まれるかはタイミング
+次第になる。「record のどの行で不具合が発生したか、log のエラーと
+突き合わせたい」という目的には順序保証が要るため、`SharedSink` は
+**単一の spdlog::logger（単一のファイルハンドル）を複数の Logger /
+DataRecorder に共有させる**ことで、この順序を保証する。
+
+### 使い方
+
+```cpp
+#include "reclog/logging/logger_factory.hpp"
+#include "reclog/recording/recorder_factory.hpp"
+#include "reclog/sink/shared_sink.hpp"
+
+reclog::sink::SharedSink sink("run.log");
+
+auto logger = reclog::logging::LoggerFactory::MakeShared(sink, reclog::logging::LogLevel::kInfo);
+auto solver = reclog::recording::RecorderFactory::MakeShared(sink, "solver");
+solver->Enable();
+
+logger->Log(reclog::logging::LogLevel::kInfo, "start");
+solver->Write("{},{:.6f}", 0, 1.0);
+logger->Log(reclog::logging::LogLevel::kError, "residual diverged at step 0");
+```
+
+`run.log` には呼び出し順に1行ずつ書き込まれる。
+
+```text
+[LOG] start
+[REC:solver] 0,1.000000
+[LOG] residual diverged at step 0
+```
+
+`Logger` 側は固定マーカー`[LOG]`（直後に半角スペース区切り）、`DataRecorder` 側は
+`MakeShared()` の第2引数（例: `"solver"`）から`[REC:solver]`（同様にスペース区切り）を
+自動生成し、各行の先頭に付与する。マーカーは呼び出し側が毎回書く必要はなく、
+`MakeShared()` で1度だけ指定する。
+
+同じ `SharedSink` を複数の `RecorderFactory::MakeShared()` に渡せば、
+モジュールごとに異なるマーカーを持つ複数の Recorder を同じファイルに
+集約できる。従来通り `RecorderFactory::MakeFile()` で個別ファイルに出す
+Recorder と、`MakeShared()` で集約する Recorder は同じ `RecorderManager<Key>`
+の中に混在させてよい（生成方法を選ぶだけで、`RecorderManager` 自体への
+変更は不要）。
+
+### レベル・Enable 状態は Logger/Recorder ごとに独立している
+
+`SharedSink` が内部で保持する `spdlog::logger` 自体は常時 trace レベル
+固定で、フィルタリングは一切行わない。`Logger::SetLevel()` /
+`DataRecorder::Enable()`/`Disable()` の状態は、`MakeShared()` が返す
+各インスタンス（`SharedLoggerImpl` / `SharedRecorderImpl`）がそれぞれ
+自前で保持し、出力するかどうかの判定もそこで行う。
+
+これは意図的な設計である。仮に共有 `spdlog::logger` のレベルを
+`Logger::SetLevel()` で直接変更する実装にすると、同じ sink を使う
+すべての Recorder の出力可否まで意図せず変わってしまう。
+`SharedSink` を介して書き込み経路（ファイルハンドル）だけを共有し、
+出力条件（レベル・Enable 状態）は各インスタンスに閉じる、という
+分離によって、複数の Logger/Recorder が同じファイルを使っていても
+互いの設定を破壊しない。
+
+### 後処理による分離
+
+集約ログからの種別抽出は、reclog 自体の責務ではなく呼び出し側・運用側の
+後処理とする。マーカーが単純な接頭辞（`[LOG]` / `[REC:solver]`）なので、
+`grep` 等の一般的なツールで容易に分離できる。
+
+```bash
+grep '^\[LOG\] '          run.log | sed 's/^\[LOG\] //'          > run.diag.log
+grep '^\[REC:solver\] '   run.log | sed 's/^\[REC:solver\] //'   > run.solver.csv
+```
 
 ---
 

@@ -5,6 +5,10 @@
 
 #include "reclog/logging/logger.hpp"
 
+namespace reclog::sink {
+class SharedSink;
+} // namespace reclog::sink
+
 namespace reclog::logging {
 
 /**
@@ -45,6 +49,19 @@ public:
      * @brief 何も出力しないロガーを生成する（テスト・無効化用）
      */
     static std::unique_ptr<Logger> MakeNull();
+
+    /**
+     * @brief SharedSink に "[LOG] " マーカー付きで書き込むロガーを生成する
+     *
+     * DataRecorder::Write() の出力と時系列を混同せず突き合わせられるよう、
+     * 診断ログであることを示す固定マーカーを各メッセージの先頭に付与する。
+     * 出力パターンは "%v"（メッセージのみ）に固定され、タイムスタンプ等の
+     * メタデータは付加されない。
+     *
+     * @param sink  書き込み先を共有する SharedSink
+     * @param level 初期ログレベル
+     */
+    static std::unique_ptr<Logger> MakeShared(reclog::sink::SharedSink &sink, LogLevel level = LogLevel::kInfo);
 };
 
 } // namespace reclog::logging

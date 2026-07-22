@@ -61,3 +61,18 @@ add_test(
     NAME test_output_context
     COMMAND $<TARGET_FILE:test_output_context>
 )
+
+# sink::SharedSink（LoggerFactory::MakeShared / RecorderFactory::MakeShared）のテスト
+add_executable(test_shared_sink
+    test_shared_sink.cpp
+)
+target_link_libraries(test_shared_sink PRIVATE
+    reclog::logging
+    reclog::recording
+    reclog::sink
+    doctest::doctest
+)
+add_test(
+    NAME test_shared_sink
+    COMMAND $<TARGET_FILE:test_shared_sink>
+)

@@ -193,7 +193,7 @@ if(RECLOG_INSTALL)
     # （install(EXPORT) は静的リンクの推移依存が export セットに存在することを要求するため）。
     # find_package で見つかった依存は呼び出し側の環境にインストール済みなので対象外
     # （reclogConfig.cmake.in の find_dependency() で解決される）。
-    set(_reclog_export_targets reclog_logging reclog_recording reclog_output)
+    set(_reclog_export_targets reclog_sink reclog_logging reclog_recording reclog_output)
     if(RECLOG_FMT_FETCHED)
         list(APPEND _reclog_export_targets fmt)
     endif()

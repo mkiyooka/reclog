@@ -30,12 +30,12 @@ pixi run test     # テスト実行
 
 ## サードパーティライブラリ
 
-| ライブラリ | バージョン | ライセンス | 用途                                |
-| ---------- | ---------- | ---------- | ----------------------------------- |
-| fmt        | 12.2.0     | MIT        | 文字列フォーマット（公開API）       |
-| spdlog     | 1.17.0     | MIT        | ログ出力（実装に閉じる、非公開）    |
-| doctest    | 2.5.3      | MIT        | テストフレームワーク                |
-| nanobench  | 4.3.11     | MIT        | マイクロベンチマーク                |
+| ライブラリ | バージョン | ライセンス | 用途                             |
+| ---------- | ---------- | ---------- | -------------------------------- |
+| fmt        | 12.2.0     | MIT        | 文字列フォーマット（公開API）    |
+| spdlog     | 1.17.0     | MIT        | ログ出力（実装に閉じる、非公開） |
+| doctest    | 2.5.3      | MIT        | テストフレームワーク             |
+| nanobench  | 4.3.11     | MIT        | マイクロベンチマーク             |
 
 バージョン・取得先は [cmake/dependencies-lib.cmake](cmake/dependencies-lib.cmake)、
 [cmake/dependencies-test.cmake](cmake/dependencies-test.cmake) を参照。
@@ -100,17 +100,20 @@ cmake --build build
 
 ## ターゲット構成
 
-reclog は 3 つの CMake ターゲットで構成される。
+reclog は 4 つの CMake ターゲットで構成される。
 
-| ターゲット        | 種別       | 内容                                                            |
-| ----------------- | ---------- | --------------------------------------------------------------- |
+| ターゲット          | 種別       | 内容                                                            |
+| ------------------- | ---------- | --------------------------------------------------------------- |
+| `reclog::sink`      | ライブラリ | `SharedSink`（複数の Logger/DataRecorder が共有する書き込み先） |
 | `reclog::logging`   | ライブラリ | `Logger` インターフェース + spdlog 実装                         |
 | `reclog::recording` | ライブラリ | `DataRecorder` インターフェース + spdlog 実装                   |
 | `reclog::output`    | INTERFACE  | `OutputContext<Key>`（header-only、logging/recording を束ねる） |
 
 spdlog / fmt は公開ヘッダーから隠蔽されており、利用側は `reclog::output` をリンクするだけで
-`Logger` / `DataRecorder` / `OutputContext` を利用できる。詳細は
-[docs/output-system.md](docs/output-system.md) を参照。
+`Logger` / `DataRecorder` / `OutputContext` を利用できる。診断ログと解析データを1ファイルに
+集約したい場合は `reclog::sink` の `SharedSink` を使う（詳細は
+[docs/output-system.md の「複数の出力を1ファイルに集約する（SharedSink）」](docs/output-system.md#複数の出力を1ファイルに集約するsharedsink)
+を参照）。
 
 ## ライブラリの利用方法
 
@@ -169,11 +172,13 @@ target_link_libraries(my_app PRIVATE reclog::output)
 - `src/` — ライブラリの実装（spdlog 依存はこの層に閉じる）
     - `logging/` — `reclog::logging::LoggerFactory` の spdlog 実装
     - `recording/` — `reclog::recording::RecorderFactory` の spdlog 実装
+    - `sink/` — `reclog::sink::SharedSink` の spdlog 実装
 - `include/` — 公開ヘッダファイル
     - `reclog/`
         - `logging/` — 診断ログの抽象インターフェース（spdlog 非依存）
         - `recording/` — 解析データ記録の抽象インターフェース（spdlog 非依存）
         - `output/` — `OutputContext<Key>`（DI コンテナ、header-only）
+        - `sink/` — `SharedSink`（複数の Logger/DataRecorder が共有する書き込み先）
 - `tests/` — テストコード（doctest）
     - `support/` — テスト用ヘルパー（`SpyLogger` 等）
 - `examples/` — 使用例（`example_output` — Logger + DataRecorder のサンプル）

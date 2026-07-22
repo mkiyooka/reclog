@@ -10,6 +10,7 @@
 
 #include "reclog/logging/logger.hpp"
 #include "reclog/logging/null_logger.hpp"
+#include "reclog/sink/shared_sink.hpp"
 
 namespace reclog::logging {
 
@@ -61,6 +62,37 @@ private:
     LogLevel level_ = LogLevel::kTrace;
 };
 
+/**
+ * @brief SharedSink 経由で "[LOG] " マーカー付きに書き込むロガー実装
+ *
+ * SharedSink が保持する spdlog::logger は複数の Logger / DataRecorder で共有される
+ * ため、そのレベルを直接操作すると他の共有先の出力を意図せず変えてしまう。
+ * そのためレベル判定はこのクラス自身が保持する level_ で行い、
+ * 共有 spdlog::logger 自体は常に info レベル固定で使う（実際の抑制は Log() 側で行う）。
+ */
+class SharedLoggerImpl final : public Logger {
+public:
+    using Logger::Log;
+
+    SharedLoggerImpl(std::shared_ptr<spdlog::logger> logger, LogLevel level)
+        : logger_(std::move(logger)),
+          level_(level) {}
+
+    void Log(LogLevel lvl, std::string_view msg) override {
+        if (lvl >= level_) {
+            logger_->info("[LOG] {}", msg);
+        }
+    }
+
+    void SetLevel(LogLevel lvl) override { level_ = lvl; }
+
+    LogLevel Level() const override { return level_; }
+
+private:
+    std::shared_ptr<spdlog::logger> logger_;
+    LogLevel level_;
+};
+
 } // namespace
 
 std::unique_ptr<Logger>
@@ -87,5 +119,10 @@ std::unique_ptr<Logger> LoggerFactory::MakeFile(
 }
 
 std::unique_ptr<Logger> LoggerFactory::MakeNull() { return std::make_unique<NullLogger>(); }
+
+std::unique_ptr<Logger> LoggerFactory::MakeShared(reclog::sink::SharedSink &sink, LogLevel level) {
+    auto inner = std::static_pointer_cast<spdlog::logger>(sink.Impl());
+    return std::make_unique<SharedLoggerImpl>(std::move(inner), level);
+}
 
 } // namespace reclog::logging
