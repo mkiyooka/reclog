@@ -6,7 +6,7 @@
             "displayName": "Base Config",
             "description": "Base configuration with common settings",
             "hidden": true,
-            "generator": "Unix Makefiles",
+            "generator": "Ninja",
             "binaryDir": "${sourceDir}/build"
         },
         {
@@ -78,7 +78,8 @@
         },
         {
             "name": "asan",
-            "configurePreset": "asan"
+            "configurePreset": "asan",
+            "jobs": 2
         }
     ],
     "testPresets": [

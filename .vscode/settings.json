@@ -14,7 +14,18 @@
     "C_Cpp.intelliSenseEngine": "disabled", // use clangd
     "C_Cpp.codeAnalysis.clangTidy.enabled": true,
 
+    /* clangd settings */
+    "clangd.path": "${workspaceFolder}/.pixi/envs/dev/bin/clangd",
+    "clangd.arguments": [
+        "--background-index",
+        "--clang-tidy",
+        "--completion-style=detailed",
+        "--header-insertion=never",
+        "--compile-commands-dir=${workspaceFolder}/build"
+    ],
+
     /* CMake settings */
+    "cmake.cmakePath": "${workspaceFolder}/.pixi/envs/default/bin/cmake",
     "cmake.buildDirectory": "${workspaceFolder}/build",
     "cmake.environment": {
         "PATH": "${env:HOME}/.pixi/bin:${env:PATH}"
@@ -23,7 +34,9 @@
     "cmake.configureOnOpen": false,
     "cmake.configureOnEdit": false,
 
+    "c-cpp-flylint.clang.executable": "${workspaceFolder}/.pixi/envs/dev/bin/clang",
     "c-cpp-flylint.clang.enable": false,
+    "c-cpp-flylint.cppcheck.executable": "${workspaceFolder}/.pixi/envs/dev/bin/cppcheck",
     "c-cpp-flylint.cppcheck.suppressions": [
         "missingIncludeSystem",
         "unusedFunction",
@@ -83,7 +96,6 @@
         "**/*.egg-info": true,
         // C++ build artifacts
         "**/.pixi": true,
-        "**/build": true,
         "**/.cache": true,
         "**/*.o": true,
         "**/*.obj": true
@@ -98,9 +110,12 @@
         "**/third_party": true,
         "**/external": true,
         "**/ext": true,
+        "**/_deps": true,
         // C++ build artifacts
         "**/.pixi": true,
         "**/build": true,
+        "**/build-asan": true,
+        "**/build-coverage": true,
         "**/.cache": true,
         "**/*.o": true,
         "**/*.obj": true,
@@ -116,9 +131,12 @@
         "**/third_party": true,
         "**/external": true,
         "**/ext": true,
+        "**/_deps": true,
         // C++ build artifacts
         "**/.pixi": true,
         "**/build": true,
+        "**/build-asan": true,
+        "**/build-coverage": true,
         "**/.cache": true,
         "**/CMakeFiles": true
     },

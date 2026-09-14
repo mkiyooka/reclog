@@ -37,3 +37,8 @@ MD046: false
 # MD059/descriptive-link-text
 # "here", "link" are not descriptive link texts.
 MD059: false
+
+# MD060/table-column-style
+# Disable aligned style: Japanese characters have variable display widths,
+# making byte-level pipe alignment impossible without a CJK-aware formatter.
+MD060: false

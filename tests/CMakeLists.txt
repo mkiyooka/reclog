@@ -8,7 +8,7 @@ add_executable(test_doctest_usage
 target_include_directories(test_doctest_usage PRIVATE
     ${PROJECT_SOURCE_DIR}/tests
 )
-target_link_libraries(test_doctest_usage PRIVATE doctest::doctest)
+target_link_libraries(test_doctest_usage PRIVATE doctest::doctest PRIVATE sanitizer_flags)
 add_test(
     NAME test_doctest_usage
     COMMAND $<TARGET_FILE:test_doctest_usage>
@@ -24,6 +24,7 @@ target_include_directories(test_logger PRIVATE
 target_link_libraries(test_logger PRIVATE
     reclog::logging
     doctest::doctest
+    PRIVATE sanitizer_flags
 )
 add_test(
     NAME test_logger
@@ -40,6 +41,7 @@ target_include_directories(test_recorder_manager PRIVATE
 target_link_libraries(test_recorder_manager PRIVATE
     reclog::recording
     doctest::doctest
+    PRIVATE sanitizer_flags
 )
 add_test(
     NAME test_recorder_manager
@@ -56,6 +58,7 @@ target_include_directories(test_output_context PRIVATE
 target_link_libraries(test_output_context PRIVATE
     reclog::output
     doctest::doctest
+    PRIVATE sanitizer_flags
 )
 add_test(
     NAME test_output_context
@@ -71,6 +74,7 @@ target_link_libraries(test_shared_sink PRIVATE
     reclog::recording
     reclog::sink
     doctest::doctest
+    PRIVATE sanitizer_flags
 )
 add_test(
     NAME test_shared_sink

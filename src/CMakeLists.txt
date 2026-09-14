@@ -12,6 +12,7 @@ target_include_directories(reclog_sink
 )
 target_link_libraries(reclog_sink
     PRIVATE spdlog::spdlog
+    PRIVATE sanitizer_flags
 )
 set_target_properties(reclog_sink PROPERTIES
     VERSION ${PROJECT_VERSION}
@@ -33,6 +34,7 @@ target_link_libraries(reclog_logging
     PRIVATE spdlog::spdlog
     PUBLIC reclog::sink
     PUBLIC fmt::fmt
+    PRIVATE sanitizer_flags
 )
 set_target_properties(reclog_logging PROPERTIES
     VERSION ${PROJECT_VERSION}
@@ -54,6 +56,7 @@ target_link_libraries(reclog_recording
     PRIVATE spdlog::spdlog
     PUBLIC reclog::sink
     PUBLIC fmt::fmt
+    PRIVATE sanitizer_flags
 )
 set_target_properties(reclog_recording PROPERTIES
     VERSION ${PROJECT_VERSION}

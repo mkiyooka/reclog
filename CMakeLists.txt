@@ -95,29 +95,30 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang)$")
     endif()
 endif()
 
-# compile_commands.json 生成とプロジェクトルートディレクトリへの自動配置
+# compile_commands.json 生成（エディタは build/compile_commands.json を直接参照する）
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-add_custom_target(copy_compile_commands ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-        ${CMAKE_BINARY_DIR}/compile_commands.json 
-        ${CMAKE_SOURCE_DIR}/compile_commands.json
-    DEPENDS ${CMAKE_BINARY_DIR}/compile_commands.json
-    COMMENT "Copying compile_commands.json to project root"
-)
 
 include_directories(include)
 
 # カバレッジフラグ（add_subdirectory より前に設定する必要がある）
 include(cmake/coverage-flags.cmake)
 
-# サニタイザフラグ（add_subdirectory より前に設定する必要がある）
-include(cmake/sanitizer-flags.cmake)
-
 # サードパーティライブラリの導入
+# FETCHCONTENT_BASE_DIR をプロジェクトルート直下の _deps に固定することで
+# build / build-asan / build-coverage 間でダウンロード・展開済みソースを共有し
+# 各プリセットの初回 configure 時の再ダウンロードを防ぐ
+# （サブプロジェクトとして取り込まれた場合は取り込み側の設定を尊重する）
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(FETCHCONTENT_BASE_DIR "${CMAKE_SOURCE_DIR}/_deps" CACHE PATH
+        "FetchContent shared source cache")
+endif()
 include(FetchContent)
 include(cmake/local-or-fetch.cmake)
 include(cmake/dependencies-lib.cmake)
 include(cmake/dependencies-test.cmake)
+
+# サニタイザフラグ（FetchContent より後に定義することでサードパーティに伝播しない）
+include(cmake/sanitizer-flags.cmake)
 
 # ==============================================================================
 # Library - メインライブラリ
@@ -141,8 +142,23 @@ endif()
 # Development utilities
 # ==============================================================================
 
-# Enable testing for CTest
-enable_testing()
+# valgrind (memcheck) の設定
+# include(CTest) は enable_testing() を含み、DartConfiguration.tcl を生成する。
+# ctest -T memcheck で登録済みテストを自動的に valgrind 実行できる。
+find_program(MEMORYCHECK_COMMAND NAMES valgrind)
+if(MEMORYCHECK_COMMAND)
+    set(MEMORYCHECK_COMMAND_OPTIONS
+        "--error-exitcode=1 --leak-check=full --show-leak-kinds=all --track-origins=yes"
+        CACHE STRING "valgrind options for ctest memcheck")
+    message(STATUS "valgrind      : ${MEMORYCHECK_COMMAND}")
+endif()
+include(CTest)
+
+configure_file(
+    ${PROJECT_SOURCE_DIR}/cmake/CTestCustom.cmake.in
+    ${PROJECT_BINARY_DIR}/CTestCustom.cmake
+    @ONLY
+)
 
 if(RECLOG_BUILD_TESTS)
     add_subdirectory(tests)
@@ -156,8 +172,11 @@ endif()
 # カスタムターゲット
 include(cmake/custom-targets.cmake)
 
-# カバレッジ
-include(cmake/coverage.cmake)
+# カバレッジ（COVERAGE_TEST_TARGETS に実行するテストバイナリを指定する）
+if(RECLOG_BUILD_TESTS)
+    set(COVERAGE_TEST_TARGETS test_doctest_usage test_logger test_recorder_manager test_output_context test_shared_sink)
+    include(cmake/coverage.cmake)
+endif()
 
 # コード品質ツール
 include(cmake/quality-setup.cmake)
@@ -167,15 +186,21 @@ include(cmake/quality-setup.cmake)
 # ==============================================================================
 
 # サードパーティライブラリのライセンス集約
-add_custom_target(collect-licenses
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/third_party_licenses"
-
-    # FetchContentで取得したライブラリのライセンス
-    COMMAND ${CMAKE_COMMAND} -E echo "Collecting FetchContent package licenses..."
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/cmake/collect-fetchcontent-licenses.cmake
-
-    COMMENT "Collecting third-party library licenses"
-)
+# FetchContent 経由で取り込まれた場合、取り込み側にも同名ターゲットがあると衝突するため
+# トップレベルビルドのときだけ定義する。
+# 取り込んだライブラリ側（このガードが入る前のバージョン）が既に同名ターゲットを
+# 定義しているケースもあるため NOT TARGET も併せて確認する。
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND NOT TARGET collect-licenses)
+    add_custom_target(collect-licenses
+        # FetchContent で取得したライブラリのライセンス
+        COMMAND ${CMAKE_COMMAND} -E echo "Collecting FetchContent package licenses..."
+        COMMAND ${CMAKE_COMMAND}
+            -DDEPS_DIR=${FETCHCONTENT_BASE_DIR}
+            -DOUTPUT_DIR=${CMAKE_BINARY_DIR}/third_party_licenses
+            -P ${PROJECT_SOURCE_DIR}/cmake/collect-fetchcontent-licenses.cmake
+        COMMENT "Collecting third-party library licenses"
+    )
+endif()
 
 # ==============================================================================
 # Install / Export（find_package(reclog CONFIG) 対応）

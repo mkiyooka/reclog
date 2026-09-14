@@ -7,4 +7,5 @@ add_executable(bench_template_library_cpp
 )
 target_link_libraries(bench_template_library_cpp PRIVATE
     nanobench::nanobench
+    PRIVATE sanitizer_flags
 )

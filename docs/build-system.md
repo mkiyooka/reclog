@@ -149,8 +149,8 @@ LLVM ソースベースカバレッジ（`-fprofile-instr-generate -fcoverage-ma
 
 ```bash
 pixi run config-coverage   # build-coverage/ に CMake 設定
-pixi run coverage          # テスト実行 → レポート生成
-pixi run coverage-report   # ブラウザで HTML レポートを開く（macOS のみ）
+pixi run -e dev coverage          # テスト実行 → レポート生成
+pixi run -e dev coverage-report   # ブラウザで HTML レポートを開く（macOS のみ）
 ```
 
 ### 注意事項
@@ -166,7 +166,7 @@ pixi run coverage-report   # ブラウザで HTML レポートを開く（macOS 
 `.clang-format` の設定に従いコードを整形する。
 
 ```bash
-pixi run format      # 整形を適用
+pixi run -e dev format      # 整形を適用
 cmake --build build --target format-dry  # 変更なしで確認のみ
 ```
 
@@ -176,7 +176,7 @@ cmake --build build --target format-dry  # 変更なしで確認のみ
 `run-clang-tidy` が利用可能な場合は並列実行される（コア数の半分）。
 
 ```bash
-pixi run lint
+pixi run -e dev lint
 ```
 
 ### cppcheck
@@ -184,7 +184,7 @@ pixi run lint
 ソースコードとヘッダファイルに対して静的解析を実行する。
 
 ```bash
-pixi run run-cppcheck          # 通常実行
+pixi run -e dev run-cppcheck          # 通常実行
 cmake --build build --target run-cppcheck-verbose  # 詳細出力
 ```
 

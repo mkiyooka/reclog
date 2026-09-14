@@ -7,4 +7,5 @@ add_executable(example_output
 )
 target_link_libraries(example_output PRIVATE
     reclog::output
+    PRIVATE sanitizer_flags
 )
