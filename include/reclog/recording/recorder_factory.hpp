@@ -93,7 +93,7 @@ public:
      * @param sink   書き込み先を共有する SharedSink
      * @param marker 行頭に付与するマーカー文字列（例: "solver" → "[REC:solver] "）
      */
-    static std::unique_ptr<DataRecorder> MakeShared(reclog::sink::SharedSink &sink, const std::string &marker);
+    static std::unique_ptr<DataRecorder> MakeShared(const reclog::sink::SharedSink &sink, const std::string &marker);
 };
 
 } // namespace reclog::recording

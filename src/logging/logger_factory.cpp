@@ -120,7 +120,7 @@ std::unique_ptr<Logger> LoggerFactory::MakeFile(
 
 std::unique_ptr<Logger> LoggerFactory::MakeNull() { return std::make_unique<NullLogger>(); }
 
-std::unique_ptr<Logger> LoggerFactory::MakeShared(reclog::sink::SharedSink &sink, LogLevel level) {
+std::unique_ptr<Logger> LoggerFactory::MakeShared(const reclog::sink::SharedSink &sink, LogLevel level) {
     auto inner = std::static_pointer_cast<spdlog::logger>(sink.Impl());
     return std::make_unique<SharedLoggerImpl>(std::move(inner), level);
 }

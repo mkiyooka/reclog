@@ -114,7 +114,8 @@ std::unique_ptr<DataRecorder> RecorderFactory::MakeConsole(const std::string &na
 
 std::unique_ptr<DataRecorder> RecorderFactory::MakeNull() { return std::make_unique<NullRecorder>(); }
 
-std::unique_ptr<DataRecorder> RecorderFactory::MakeShared(reclog::sink::SharedSink &sink, const std::string &marker) {
+std::unique_ptr<DataRecorder>
+RecorderFactory::MakeShared(const reclog::sink::SharedSink &sink, const std::string &marker) {
     auto inner = std::static_pointer_cast<spdlog::logger>(sink.Impl());
     return std::make_unique<SharedRecorderImpl>(std::move(inner), fmt::format("[REC:{}] ", marker));
 }

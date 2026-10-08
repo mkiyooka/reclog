@@ -36,7 +36,7 @@ std::filesystem::path MakeTempPath(const std::string &name) {
 TEST_CASE("SharedSink: Logger writes with a [LOG] marker") {
     auto path = MakeTempPath("logger_marker");
     {
-        reclog::sink::SharedSink sink(path.string());
+        const reclog::sink::SharedSink sink(path.string());
         auto logger = reclog::logging::LoggerFactory::MakeShared(sink, LogLevel::kInfo);
         logger->Log(LogLevel::kInfo, "hello={}", 1);
     }
@@ -49,7 +49,7 @@ TEST_CASE("SharedSink: Logger writes with a [LOG] marker") {
 TEST_CASE("SharedSink: Logger below the configured level is suppressed") {
     auto path = MakeTempPath("logger_level");
     {
-        reclog::sink::SharedSink sink(path.string());
+        const reclog::sink::SharedSink sink(path.string());
         auto logger = reclog::logging::LoggerFactory::MakeShared(sink, LogLevel::kWarn);
         logger->Log(LogLevel::kInfo, "hidden");
         logger->Log(LogLevel::kWarn, "visible");
@@ -63,7 +63,7 @@ TEST_CASE("SharedSink: Logger below the configured level is suppressed") {
 TEST_CASE("SharedSink: DataRecorder writes with a [REC:marker] prefix") {
     auto path = MakeTempPath("recorder_marker");
     {
-        reclog::sink::SharedSink sink(path.string());
+        const reclog::sink::SharedSink sink(path.string());
         auto rec = reclog::recording::RecorderFactory::MakeShared(sink, "solver");
         rec->Enable();
         rec->Write("{},{:.6f}", 0, 1.0);
@@ -78,7 +78,7 @@ TEST_CASE("SharedSink: DataRecorder writes with a [REC:marker] prefix") {
 TEST_CASE("SharedSink: DataRecorder discards Write() while disabled") {
     auto path = MakeTempPath("recorder_disabled");
     {
-        reclog::sink::SharedSink sink(path.string());
+        const reclog::sink::SharedSink sink(path.string());
         auto rec = reclog::recording::RecorderFactory::MakeShared(sink, "solver");
         rec->Write("{},{:.6f}", 0, 1.0); // 初期状態は disabled
         rec->Flush();
@@ -90,7 +90,7 @@ TEST_CASE("SharedSink: DataRecorder discards Write() while disabled") {
 TEST_CASE("SharedSink: Logger and DataRecorder sharing a sink do not clobber each other's state") {
     auto path = MakeTempPath("shared_independent_state");
     {
-        reclog::sink::SharedSink sink(path.string());
+        const reclog::sink::SharedSink sink(path.string());
         auto logger = reclog::logging::LoggerFactory::MakeShared(sink, LogLevel::kError);
         auto rec = reclog::recording::RecorderFactory::MakeShared(sink, "mesh");
         rec->Enable();
@@ -110,7 +110,7 @@ TEST_CASE("SharedSink: Logger and DataRecorder sharing a sink do not clobber eac
 TEST_CASE("SharedSink: multiple recorders with different markers append to the same file in call order") {
     auto path = MakeTempPath("recorder_interleave");
     {
-        reclog::sink::SharedSink sink(path.string());
+        const reclog::sink::SharedSink sink(path.string());
         auto solver = reclog::recording::RecorderFactory::MakeShared(sink, "solver");
         auto mesh = reclog::recording::RecorderFactory::MakeShared(sink, "mesh");
         solver->Enable();

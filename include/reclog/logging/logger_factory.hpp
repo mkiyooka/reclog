@@ -61,7 +61,7 @@ public:
      * @param sink  書き込み先を共有する SharedSink
      * @param level 初期ログレベル
      */
-    static std::unique_ptr<Logger> MakeShared(reclog::sink::SharedSink &sink, LogLevel level = LogLevel::kInfo);
+    static std::unique_ptr<Logger> MakeShared(const reclog::sink::SharedSink &sink, LogLevel level = LogLevel::kInfo);
 };
 
 } // namespace reclog::logging
